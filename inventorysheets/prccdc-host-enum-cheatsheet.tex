@@ -1,0 +1,226 @@
+% PRCCDC Host Enumeration Cheat Sheet (one page)
+% Uses the same style as linux-blueteam-cheatsheet.tex, but focuses on inventory gathering.
+\documentclass[9pt,landscape]{article}
+\usepackage{multicol}
+\usepackage{calc}
+\usepackage{ifthen}
+\usepackage[landscape]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\ifthenelse{\lengthtest { \paperwidth = 11in}}
+	{ \geometry{top=.3in,left=.3in,right=.3in,bottom=.3in} }
+	{\ifthenelse{ \lengthtest{ \paperwidth = 297mm}}
+		{\geometry{top=0.6cm,left=0.6cm,right=0.6cm,bottom=0.6cm} }
+		{\geometry{top=0.6cm,left=0.6cm,right=0.6cm,bottom=0.6cm} }
+	}
+
+\pagestyle{empty}
+
+% Section title color
+\definecolor{sblue}{HTML}{1a5276}
+
+% Soft section background palette
+\definecolor{secred}{HTML}{f5b7b1}
+\definecolor{secorange}{HTML}{f5cba7}
+\definecolor{secpurple}{HTML}{d7bde2}
+\definecolor{secyellow}{HTML}{fdebd0}
+\definecolor{secgreen}{HTML}{abebc6}
+\definecolor{secteal}{HTML}{a3e4d7}
+\definecolor{secgray}{HTML}{d5dbdb}
+
+% Code block colors
+\definecolor{codebg}{HTML}{f4f6f7}
+\definecolor{codeborder}{HTML}{d5dbdb}
+\definecolor{codegreen}{HTML}{27ae60}
+\definecolor{codekw}{HTML}{2980b9}
+\definecolor{codegray}{HTML}{7f8c8d}
+
+% Listings style
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeborder},
+  framesep=1.5pt,
+  xleftmargin=2pt,
+  xrightmargin=2pt,
+  aboveskip=3pt,
+  belowskip=1pt,
+  breaklines=true,
+  breakatwhitespace=false,
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{codekw}\bfseries,
+  stringstyle=\color{codegray},
+  showstringspaces=false,
+  tabsize=2,
+  language=bash,
+  morecomment=[l]{\#},
+  literate={<}{{\textless}}1 {>}{{\textgreater}}1,
+}
+
+% Custom colored section: \colorsec{bgcolor}{Title}
+\newcommand{\colorsec}[2]{%
+  \vspace{0.8ex plus 0.3ex minus 0.3ex}%
+  \noindent\rule{\linewidth}{0.4pt}\\[-0.8ex]%
+  \noindent\colorbox{#1}{\parbox{\dimexpr\linewidth-2\fboxsep}{%
+    \strut\textbf{\small\color{sblue} #2}}}%
+  \vspace{0.3ex}\par\nobreak%
+}
+
+\makeatletter
+\renewcommand{\subsection}{\@startsection{subsection}{2}{0mm}%
+                                {-1explus -.5ex minus -.2ex}%
+                                {0.5ex plus .2ex}%
+                                {\normalfont\normalsize\bfseries\color{sblue}}}
+\makeatother
+
+\setcounter{secnumdepth}{0}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt plus 0.3ex}
+
+\begin{document}
+
+\raggedright
+\scriptsize
+\begin{multicols}{2}
+
+\setlength{\premulticols}{1pt}
+\setlength{\postmulticols}{1pt}
+\setlength{\multicolsep}{1pt}
+\setlength{\columnsep}{8pt}
+
+\begin{center}
+     \large{\textbf{PRCCDC Host Enumeration Cheat Sheet}} \\
+\end{center}
+
+\colorsec{secteal}{Linux --- System \& OS}
+\begin{lstlisting}
+hostname; hostname -f
+cat /etc/os-release; uname -a
+hostnamectl 2>/dev/null
+uptime; who -a; last -n 10
+timedatectl 2>/dev/null; df -hT
+\end{lstlisting}
+
+\colorsec{secteal}{Linux --- Network \& Exposure}
+\begin{lstlisting}
+ip a; ip r; ip neigh
+resolvectl status 2>/dev/null || cat /etc/resolv.conf
+ss -tulpen                # listeners (ports/PIDs)
+lsof -nP -iTCP -sTCP:LISTEN
+sudo iptables -S 2>/dev/null
+sudo ufw status verbose 2>/dev/null
+sudo firewall-cmd --list-all 2>/dev/null
+\end{lstlisting}
+
+\colorsec{secpurple}{Linux --- Users, Privilege, Auth}
+\begin{lstlisting}
+id; groups; sudo -l
+getent passwd | cut -d: -f1,3,6,7 | column -t -s:
+getent group | head
+awk -F: '$3==0{print}' /etc/passwd
+grep -R "PermitRootLogin\|PasswordAuthentication" /etc/ssh/sshd_config*
+\end{lstlisting}
+
+\colorsec{secgreen}{Linux --- Services, Tasks, Logs}
+\begin{lstlisting}
+systemctl --type=service --state=running
+systemctl list-timers --all
+crontab -l; sudo crontab -l
+ls -la /etc/cron.* /var/spool/cron 2>/dev/null
+journalctl -p warning..alert -n 100 --no-pager
+\end{lstlisting}
+
+\colorsec{secyellow}{Linux --- Packages \& Patch Level}
+\begin{lstlisting}
+dpkg -l | head; apt list --upgradable 2>/dev/null | head
+rpm -qa | head; dnf check-update 2>/dev/null | head
+\end{lstlisting}
+
+\colorsec{secorange}{Linux --- Data, Databases, Shares}
+\begin{lstlisting}
+mysql -u root -e "SHOW DATABASES;" 2>/dev/null
+grep -r "datadir" /etc/mysql/ /etc/my.cnf 2>/dev/null
+sudo -u postgres psql -c "\l" 2>/dev/null
+cat /etc/exports 2>/dev/null       # NFS
+testparm -s 2>/dev/null | grep path # Samba
+find / -name "*.pem" -o -name "*.key" 2>/dev/null
+find /var/www /srv -name "*.conf" -exec grep -il "pass" {} \; 2>/dev/null
+\end{lstlisting}
+
+\colorsec{secred}{Linux --- Security Controls \& Telemetry}
+\begin{lstlisting}
+getenforce 2>/dev/null; aa-status 2>/dev/null
+auditctl -l 2>/dev/null
+systemctl is-active auditd rsyslog syslog-ng 2>/dev/null
+ls /var/log/; journalctl --disk-usage
+\end{lstlisting}
+
+\columnbreak
+
+\colorsec{secteal}{Windows --- System \& OS (PowerShell)}
+\begin{lstlisting}
+$env:COMPUTERNAME
+systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+Get-ComputerInfo | select OsName,OsVersion,WindowsBuildLabEx
+Get-TimeZone; w32tm /query /status
+Get-Volume | ft -AutoSize
+\end{lstlisting}
+
+\colorsec{secteal}{Windows --- Network \& Exposure}
+\begin{lstlisting}
+Get-NetIPAddress | sort InterfaceAlias | ft -AutoSize
+Get-NetRoute -DestinationPrefix "0.0.0.0/0" | ft -AutoSize
+Get-DnsClientServerAddress | ft -AutoSize
+Get-NetTCPConnection -State Listen | sort LocalPort | ft -AutoSize
+Get-NetFirewallProfile | ft -AutoSize
+Get-NetFirewallRule -Enabled True | select -First 20
+\end{lstlisting}
+
+\colorsec{secpurple}{Windows --- Users, Groups, Remote Access}
+\begin{lstlisting}
+whoami /all
+Get-LocalUser | ft -AutoSize
+Get-LocalGroupMember Administrators
+net user; net localgroup administrators
+Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name fDenyTSConnections
+Get-NetTCPConnection -State Listen | ? {$_.LocalPort -in 3389,5985,5986}
+\end{lstlisting}
+
+\colorsec{secgreen}{Windows --- Services, Tasks, Logs}
+\begin{lstlisting}
+Get-Service | ? {$_.Status -eq "Running"} | sort Name
+Get-ScheduledTask | select TaskName,State | ft -AutoSize
+schtasks /query /fo LIST /v | more
+Get-WinEvent -LogName Security -MaxEvents 30
+\end{lstlisting}
+
+\colorsec{secyellow}{Windows --- Patch Level \& Roles}
+\begin{lstlisting}
+Get-HotFix | sort InstalledOn -Descending | select -First 10
+Get-WindowsFeature | ? InstallState -eq Installed
+nltest /dsgetdc: 2>$null           # AD/DC check
+\end{lstlisting}
+
+\colorsec{secorange}{Windows --- Data, Databases, Shares}
+\begin{lstlisting}
+sqlcmd -S localhost -Q "SELECT name,physical_name FROM sys.master_files" 2>$null
+Get-Service *SQL* | ft -AutoSize
+Get-SmbShare | ft -AutoSize; net share
+Get-IISSite 2>$null | select Name,PhysicalPath
+Get-ChildItem C:\ -Recurse -Include *.pfx,*.p12,*.key -EA SilentlyContinue
+dir C:\inetpub /s /b 2>$null | findstr /i "web.config"
+\end{lstlisting}
+
+\colorsec{secred}{Windows --- Security Controls \& Telemetry}
+\begin{lstlisting}
+Get-MpComputerStatus | select *Enabled,*Updated
+Get-Service WinDefend,Sysmon*,WinRM | ft -AutoSize
+auditpol /get /category:*
+Get-ItemProperty "HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" 2>$null
+wevtutil el | findstr /i "security sysmon powershell"
+\end{lstlisting}
+
+\end{multicols}
+\end{document}

@@ -1,0 +1,525 @@
+\documentclass[10pt,landscape]{article}
+\usepackage{multicol}
+\usepackage{calc}
+\usepackage{ifthen}
+\usepackage[landscape]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\ifthenelse{\lengthtest { \paperwidth = 11in}}
+	{ \geometry{top=.5in,left=.5in,right=.5in,bottom=.5in} }
+	{\ifthenelse{ \lengthtest{ \paperwidth = 297mm}}
+		{\geometry{top=1cm,left=1cm,right=1cm,bottom=1cm} }
+		{\geometry{top=1cm,left=1cm,right=1cm,bottom=1cm} }
+	}
+
+\pagestyle{empty}
+
+% Section title color
+\definecolor{sblue}{HTML}{1a5276}
+
+% Soft section background palette
+\definecolor{secred}{HTML}{f5b7b1}      % triage / kick off
+\definecolor{secorange}{HTML}{f5cba7}   % firewall
+\definecolor{secpurple}{HTML}{d7bde2}   % users / accounts
+\definecolor{secyellow}{HTML}{fdebd0}   % persistence
+\definecolor{secgreen}{HTML}{abebc6}    % logs / IOCs
+\definecolor{secteal}{HTML}{a3e4d7}     % files / process / network
+\definecolor{secgray}{HTML}{d5dbdb}     % hardening / IR
+
+% Code block colors
+\definecolor{codebg}{HTML}{f4f6f7}
+\definecolor{codeborder}{HTML}{d5dbdb}
+\definecolor{codegreen}{HTML}{27ae60}
+\definecolor{codekw}{HTML}{2980b9}
+\definecolor{codegray}{HTML}{7f8c8d}
+
+% Listings style
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeborder},
+  framesep=2pt,
+  xleftmargin=3pt,
+  xrightmargin=3pt,
+  aboveskip=4pt,
+  belowskip=2pt,
+  breaklines=true,
+  breakatwhitespace=false,
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{codekw}\bfseries,
+  stringstyle=\color{codegray},
+  showstringspaces=false,
+  tabsize=2,
+  language=bash,
+  morekeywords={iptables,systemctl,journalctl,usermod,gpasswd,visudo,pkill,killall,fuser,lsof,tcpdump,modprobe},
+  morecomment=[l]{\#},
+  literate={<}{{\textless}}1 {>}{{\textgreater}}1,
+}
+
+% Custom colored section: \colorsec{bgcolor}{Title}
+\newcommand{\colorsec}[2]{%
+  \vspace{1.5ex plus 0.5ex minus 0.5ex}%
+  \noindent\rule{\linewidth}{0.4pt}\\[-0.7ex]%
+  \noindent\colorbox{#1}{\parbox{\dimexpr\linewidth-2\fboxsep}{%
+    \strut\textbf{\normalsize\color{sblue} #2}}}%
+  \vspace{0.5ex}\par\nobreak%
+}
+
+\makeatletter
+\renewcommand{\subsection}{\@startsection{subsection}{2}{0mm}%
+                                {-1explus -.5ex minus -.2ex}%
+                                {0.5ex plus .2ex}%
+                                {\normalfont\normalsize\bfseries\color{sblue}}}
+\makeatother
+
+\setcounter{secnumdepth}{0}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt plus 0.5ex}
+
+% -----------------------------------------------------------------------
+
+\begin{document}
+
+\raggedright
+\footnotesize
+\begin{multicols}{3}
+
+\setlength{\premulticols}{1pt}
+\setlength{\postmulticols}{1pt}
+\setlength{\multicolsep}{1pt}
+\setlength{\columnsep}{2pt}
+
+\begin{center}
+     \Large{\textbf{Linux Blue Team Cheat Sheet --- CCDC}} \\
+\end{center}
+
+\colorsec{secred}{Initial Triage}
+\begin{lstlisting}
+w                       # who is logged in
+who                     # current sessions
+last -n 20              # recent logins
+lastb -n 20             # failed logins
+ps auxf                 # full process tree
+ss -tulnp               # listening ports + PIDs
+ss -anp                 # all connections + PIDs
+netstat -tulnp          # alt: listening sockets
+\end{lstlisting}
+
+\colorsec{secred}{Kick Red Teamers Off}
+
+\subsection{Kill User Sessions}
+\begin{lstlisting}
+# Find their PTS/TTY from `w` output
+pkill -KILL -t pts/2      # kill by terminal
+pkill -KILL -u baduser    # kill all by user
+\end{lstlisting}
+
+\subsection{Kill SSH Sessions}
+\begin{lstlisting}
+ps aux | grep sshd        # find sshd child
+kill -9 <PID>
+# Block their IP immediately
+iptables -A INPUT -s <IP> -j DROP
+\end{lstlisting}
+
+\subsection{Kill Reverse Shells / Meterpreter}
+\begin{lstlisting}
+# Find suspicious outbound connections
+ss -anp | grep ESTAB
+lsof -i -P -n | grep ESTAB
+# Look for: bash/sh/python/perl/nc/ncat
+# with connections to odd ports
+kill -9 <PID>
+# Block C2 IP
+iptables -A OUTPUT -d <C2_IP> -j DROP
+\end{lstlisting}
+
+\subsection{Kill by Port}
+\begin{lstlisting}
+fuser <port>/tcp          # find PID on port
+lsof -i :<port>           # detailed info
+kill -9 <PID>
+\end{lstlisting}
+
+\subsection{Kill Signals Quick Ref}
+\begin{lstlisting}
+kill -9 <PID>             # SIGKILL (force)
+kill -15 <PID>            # SIGTERM (graceful)
+killall <name>            # by process name
+pkill -f "pattern"        # by cmdline match
+\end{lstlisting}
+
+\colorsec{secorange}{iptables Firewall}
+\begin{lstlisting}
+iptables -L -n -v --line-numbers
+
+# Allow needed services
+iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+
+# Allow established + loopback
+iptables -A INPUT -m state \
+  --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -i lo -j ACCEPT
+
+# Default deny
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+
+# Block specific attacker IP
+iptables -I INPUT -s <IP> -j DROP
+iptables -I OUTPUT -d <IP> -j DROP
+
+# Delete rule by line number
+iptables -D INPUT <line#>
+
+# Persist / restore rules
+iptables-save > /etc/iptables.rules
+iptables-restore < /etc/iptables.rules
+\end{lstlisting}
+
+\colorsec{secpurple}{User \& Account Hardening}
+\begin{lstlisting}
+# List all users with login shells
+grep -v '/nologin\|/false' /etc/passwd
+
+# Check for UID 0 (root-equiv) accounts
+awk -F: '$3==0 {print}' /etc/passwd
+
+# Lock suspicious account
+usermod -L suspectuser
+passwd -l suspectuser
+
+# Change password
+passwd <user>
+
+# Check / edit sudoers
+visudo
+ls -la /etc/sudoers.d/
+
+# Remove user from sudo/wheel
+gpasswd -d baduser sudo
+gpasswd -d baduser wheel
+
+# Find SSH key backdoors
+find / -name authorized_keys 2>/dev/null
+# Review & remove unknown keys
+\end{lstlisting}
+
+\colorsec{secyellow}{Hunting Persistence}
+
+\subsection{Cron Jobs}
+\begin{lstlisting}
+crontab -l               # current user
+crontab -l -u root       # root crontab
+ls -la /etc/cron*         # system crons
+cat /etc/crontab
+# Check all users
+for u in $(cut -f1 -d: /etc/passwd); do
+  crontab -l -u $u 2>/dev/null; done
+# Also: /var/spool/cron/crontabs/
+\end{lstlisting}
+
+\subsection{Systemd Services / Timers}
+\begin{lstlisting}
+systemctl list-units --type=service \
+  --state=running
+systemctl list-timers --all
+# Look for unfamiliar unit files in:
+ls /etc/systemd/system/
+ls /usr/lib/systemd/system/
+ls ~/.config/systemd/user/
+# Disable rogue service
+systemctl stop <svc>
+systemctl disable <svc>
+\end{lstlisting}
+
+\subsection{Init / Startup Scripts}
+\begin{lstlisting}
+ls -la /etc/init.d/
+cat /etc/rc.local
+\end{lstlisting}
+
+\subsection{Shell Profiles (Backdoor Triggers)}
+\begin{lstlisting}
+cat /etc/profile /etc/bash.bashrc
+cat ~/.bashrc ~/.bash_profile ~/.profile
+# Look for: curl | wget | nc | /dev/tcp
+# Also check: /etc/environment
+#   /etc/ld.so.preload (LD_PRELOAD hijack)
+\end{lstlisting}
+
+\subsection{SUID / SGID Binaries}
+\begin{lstlisting}
+find / -perm -4000 -type f 2>/dev/null
+find / -perm -2000 -type f 2>/dev/null
+# Compare against known-good baseline
+\end{lstlisting}
+
+\subsection{Kernel Modules}
+\begin{lstlisting}
+lsmod                    # list loaded modules
+modprobe -r <module>     # remove a module
+# Look for unknown / rootkit modules
+\end{lstlisting}
+
+\colorsec{secgreen}{Log Analysis --- IOCs}
+
+\subsection{Key Log Locations}
+\begin{tabular}{@{}ll@{}}
+\verb!/var/log/auth.log!   & Auth (Debian/Ubuntu) \\
+\verb!/var/log/secure!     & Auth (RHEL/CentOS) \\
+\verb!/var/log/syslog!     & General (Debian) \\
+\verb!/var/log/messages!   & General (RHEL) \\
+\verb!/var/log/apache2/!   & Apache web logs \\
+\verb!/var/log/nginx/!     & Nginx web logs \\
+\verb!/var/log/cron!       & Cron execution \\
+\verb!/var/log/kern.log!   & Kernel messages \\
+\verb!journalctl -xe!      & Systemd journal \\
+\end{tabular}
+
+\subsection{IOC Searches}
+\begin{lstlisting}
+# Brute force SSH
+grep "Failed password" /var/log/auth.log
+# Count IPs with most failures
+grep "Failed password" /var/log/auth.log \
+  | awk '{print $(NF-3)}' | sort | \
+  uniq -c | sort -rn | head
+
+# Successful logins
+grep "Accepted" /var/log/auth.log
+
+# Privilege escalation
+grep "sudo:" /var/log/auth.log
+grep "su:" /var/log/auth.log
+
+# New user creation
+grep "useradd\|adduser" /var/log/auth.log
+
+# Password changes
+grep "passwd" /var/log/auth.log
+
+# Web shells in access logs
+grep -i "cmd=\|exec\|system\|passthru\
+\|eval\|shell" /var/log/apache2/access.log
+
+# Log tampering: check timestamps/sizes
+ls -la /var/log/
+\end{lstlisting}
+
+\colorsec{secteal}{Suspicious Files}
+\begin{lstlisting}
+# Recently modified files (last 10 min)
+find / -mmin -10 -type f 2>/dev/null
+
+# World-writable files
+find / -perm -0002 -type f 2>/dev/null
+
+# Attacker drop zones
+ls -la /tmp /dev/shm /var/tmp
+
+# Hidden files in odd places
+find / -name ".*" -type f 2>/dev/null \
+  | grep -v -e proc -e sys
+
+# Recent webshells
+find /var/www -name "*.php" -mmin -60
+
+# Files owned by nobody/nogroup
+find / -nouser -o -nogroup 2>/dev/null
+
+# Executables in /tmp (should not exist)
+find /tmp -type f -executable
+\end{lstlisting}
+
+\colorsec{secteal}{Process Forensics}
+\begin{lstlisting}
+ps auxww                 # full command lines
+
+# Inspect a specific process
+ls -la /proc/<PID>/exe   # actual binary
+cat /proc/<PID>/cmdline  # command line
+ls -la /proc/<PID>/fd/   # open file handles
+cat /proc/<PID>/environ  # environment vars
+
+# DELETED but running binaries (IOC!)
+ls -la /proc/*/exe 2>/dev/null | grep deleted
+
+# Processes running from /tmp (IOC!)
+ls -la /proc/*/exe 2>/dev/null | grep tmp
+\end{lstlisting}
+
+\colorsec{secteal}{Network Forensics}
+\begin{lstlisting}
+# Active connections with PIDs
+ss -anp | grep ESTAB
+
+# ARP table (look for spoofing)
+arp -a
+ip neigh
+
+# Routing table (check for hijacks)
+ip route
+route -n
+
+# Promiscuous mode (sniffers running?)
+ip link | grep PROMISC
+
+# Capture traffic for analysis
+tcpdump -i eth0 -w capture.pcap
+tcpdump -i eth0 port not 22
+
+# DNS (check for hijacking)
+cat /etc/resolv.conf
+\end{lstlisting}
+
+\colorsec{secgray}{SSH Hardening}
+Edit \verb!/etc/ssh/sshd_config!:
+\begin{lstlisting}
+PermitRootLogin no
+PasswordAuthentication no
+MaxAuthTries 3
+AllowUsers user1 user2
+Protocol 2
+\end{lstlisting}
+Then: \verb!systemctl restart sshd!
+
+\colorsec{secgray}{Important Config Files}
+\begin{tabular}{@{}ll@{}}
+\verb!/etc/passwd!          & User accounts \\
+\verb!/etc/shadow!          & Password hashes \\
+\verb!/etc/group!           & Groups \\
+\verb!/etc/sudoers!         & Sudo privileges \\
+\verb!/etc/ssh/sshd_config! & SSH server config \\
+\verb!/etc/hosts!           & Static DNS entries \\
+\verb!/etc/resolv.conf!     & DNS servers \\
+\verb!/etc/crontab!         & System cron \\
+\verb!/etc/fstab!           & Mount points \\
+\verb!/etc/exports!         & NFS shares \\
+\verb!/etc/samba/smb.conf!  & Samba config \\
+\verb!/etc/apache2/!        & Apache config \\
+\verb!/etc/nginx/!          & Nginx config \\
+\verb!/etc/mysql/my.cnf!    & MySQL config \\
+\end{tabular}
+
+\colorsec{secgreen}{What to Hunt For (IOC Names)}
+\textbf{Suspicious process names:}
+\begin{itemize} \itemsep0pt \parskip0pt \parsep0pt \topsep0pt
+\item Netcat variants: nc, ncat, netcat, ncat.traditional
+\item Tunneling: chisel, ligolo, socat, ngrok, frp
+\item Enum scripts: linpeas, linenum, pspy, lse.sh
+\item Credential dumpers: mimipenguin, lazagne, keydump
+\item Scanners: nmap, masscan, rustscan, zmap
+\item Stagers: msfvenom output, elf with random names in /tmp
+\end{itemize}
+
+\textbf{Suspicious behaviors:}
+\begin{itemize} \itemsep0pt \parskip0pt \parsep0pt \topsep0pt
+\item bash/sh/python with open network socket
+\item Process running from /tmp, /dev/shm, /var/tmp
+\item Deleted binary still running (see /proc/*/exe)
+\item Outbound connection on high or unusual port
+\item Cron / systemd launching unknown binary
+\item \verb!/etc/ld.so.preload! non-empty (LD\_PRELOAD hook)
+\item \verb!authorized_keys! added to unexpected users
+\end{itemize}
+
+\colorsec{secgray}{Protect Key Files (chattr)}
+\begin{lstlisting}
+# Make file immutable -- even root cannot modify
+chattr +i /etc/passwd /etc/shadow /etc/sudoers
+chattr +i /etc/hosts /etc/resolv.conf
+chattr +i /etc/ssh/sshd_config
+# Remove immutable flag when you need to edit
+chattr -i /etc/passwd
+# List file attributes
+lsattr /etc/passwd
+\end{lstlisting}
+
+\colorsec{secteal}{Auditd --- File \& Auth Monitoring}
+\begin{lstlisting}
+systemctl start auditd
+# Watch critical files for writes/attr changes
+auditctl -w /etc/passwd  -p wa -k passwd_mod
+auditctl -w /etc/shadow  -p wa -k shadow_mod
+auditctl -w /etc/sudoers -p wa -k sudoers_mod
+auditctl -w /etc/ssh/sshd_config -p wa -k ssh_mod
+# Watch for privilege escalation attempts
+auditctl -w /usr/bin/sudo -p x -k sudo_exec
+# Query logs
+ausearch -k passwd_mod
+ausearch -k sudo_exec | grep -i "res=failed"
+aureport --auth --summary
+\end{lstlisting}
+
+\colorsec{secorange}{TCP Wrappers (hosts.allow/deny)}
+\begin{lstlisting}
+# Deny all by default
+echo "ALL: ALL" >> /etc/hosts.deny
+# Then whitelist what you need in hosts.allow
+echo "sshd: 192.168.1.0/24" >> /etc/hosts.allow
+echo "sshd: 10.0.0.0/8"     >> /etc/hosts.allow
+# Verify wrapper is active (check sshd linkage)
+ldd /usr/sbin/sshd | grep libwrap
+\end{lstlisting}
+
+\colorsec{secpurple}{Account Lockout \& Password Policy}
+\begin{lstlisting}
+# Force immediate password expiry (must reset)
+chage -d 0 <user>
+# Set min/max password age
+chage -m 1 -M 90 <user>
+# View expiry info
+chage -l <user>
+# Lock account after N failed logins (PAM)
+# /etc/pam.d/common-auth (Debian) or system-auth
+# Add: auth required pam_tally2.so deny=5
+#       account required pam_tally2.so
+# Reset counter: pam_tally2 --user=<user> --reset
+# Expire ALL regular-user passwords at once
+for u in $(awk -F: '$3>=1000{print $1}' /etc/passwd); do
+  chage -d 0 $u; done
+\end{lstlisting}
+
+\colorsec{secgray}{Hardening Checklist}
+\begin{itemize} \itemsep0pt \parskip0pt \parsep0pt \topsep0pt
+\item Change ALL default passwords immediately
+\item \verb!PermitRootLogin no! in sshd\_config
+\item \verb!PasswordAuthentication no! + key-based auth
+\item Disable unused services: \verb!systemctl disable <svc>!
+\item Update packages: \verb!apt update \&\& apt upgrade -y!
+\item \verb!/etc/shadow! permissions: \verb!chmod 640!, owner root:shadow
+\item Remove unnecessary SUID bits: \verb!chmod u-s <bin>!
+\item \verb!/etc/hosts.deny!: ALL: ALL (TCP wrappers)
+\item \verb!chattr +i! on /etc/passwd, shadow, sudoers
+\item Disable IPv6 if not needed: \verb!sysctl net.ipv6.conf.all.disable\_ipv6=1!
+\item Check \verb!/etc/hosts! for malicious redirects
+\item Verify DNS servers in \verb!/etc/resolv.conf!
+\item Review \verb!/etc/ld.so.preload! --- should be empty
+\item Back up configs before making changes
+\end{itemize}
+
+\colorsec{secgray}{Incident Response Flow}
+\begin{enumerate} \itemsep0pt \parskip0pt \parsep0pt \topsep0pt
+\item \textbf{Identify:} \verb!w!, \verb!ss -anp!, \verb!ps auxf!
+\item \textbf{Kill:} sessions, reverse shells, C2 processes
+\item \textbf{Block:} \verb!iptables! attacker IPs; TCP wrappers
+\item \textbf{Lockdown:} passwords, accounts, SSH keys, sudoers
+\item \textbf{Protect:} \verb!chattr +i! on critical files
+\item \textbf{Hunt:} cron, systemd, shell profiles, SUID, ld.so.preload
+\item \textbf{Harden:} firewall default-deny, disable unused services
+\item \textbf{Monitor:} auditd, watch logs \& active connections
+\end{enumerate}
+
+\rule{0.3\linewidth}{0.25pt}
+\scriptsize
+
+CCDC Blue Team --- Linux | \today
+
+\end{multicols}
+\end{document}

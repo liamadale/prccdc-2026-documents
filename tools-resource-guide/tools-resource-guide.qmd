@@ -1,0 +1,2293 @@
+---
+title: "Blue Team Tools Resource Guide"
+subtitle: "Windows and Linux Tools for System Administration, Defense, and Monitoring"
+format:
+  pdf:
+    toc: true
+    toc-depth: 3
+    pdf-engine: pdflatex
+    geometry:
+      - margin=0.75in
+    fontsize: 9pt
+    include-in-header:
+      text: |
+        \usepackage{fvextra}
+        \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+        \usepackage{xurl}
+        \usepackage{enumitem}
+        \setlist[description]{style=nextline,leftmargin=0pt,labelindent=0pt,itemsep=2pt,parsep=0pt}
+        \usepackage{longtable}
+        \usepackage{booktabs}
+---
+
+# Online Resources and Tools
+
+## Portmaster (Safing)
+
+**What it is:** Free, open-source application firewall and network monitor for Windows. It gives per-application network control, DNS-level ad/tracker blocking, and real-time connection visibility. Think of it as a modern, GUI-based replacement for Windows Firewall with application-level granularity.
+
+**Website:** https://safing.io/portmaster
+
+**Download:** https://safing.io/download
+
+**Why it matters for CCDC:** Portmaster lets you see exactly which processes are making network connections and to where, block unauthorized outbound traffic per-application, and monitor for suspicious network activity in real time. It is far more usable than raw `netsh` firewall rules during a fast-paced competition.
+
+### Installation
+
+1. Download the installer from https://safing.io/download (approximately 50 MB).
+2. Run the installer as Administrator. Default install path is `C:\Program Files\Safing\Portmaster\`.
+3. Portmaster runs as a system service and starts automatically.
+4. Access the UI by clicking the system tray icon or navigating to `http://127.0.0.1:817/` in a browser.
+
+**Install methods:**
+
+- **GUI installer:** Download from https://safing.io/download (~50 MB)
+- **Winget:** `winget install -i portmaster`
+- **Offline installer:** Build one using https://github.com/innovatodev/PortmasterOffline (~300 MB, bundles all dependencies). Critical for competition environments without internet.
+
+**Install path:** `C:\ProgramData\Safing\Portmaster\`
+
+**Uninstall:** `C:\ProgramData\Safing\Portmaster\portmaster-uninstaller.exe`
+
+No account creation is required. Portmaster is fully functional without an account. Safing offers a paid "SPN" (Safing Privacy Network) VPN service, but the firewall, network monitor, and DNS features are all free. Uses Windows Filtering Platform (WFP) kernel driver for packet-level interception.
+
+### Key Features for Blue Teams
+
+| Feature | How It Helps |
+|---|---|
+| Per-app network rules | Block specific processes from reaching the internet (e.g., block `powershell.exe` outbound) |
+| Connection history | See every connection each application has made, with timestamps and destination IPs |
+| DNS monitoring | See all DNS queries with the requesting process. Detect C2 beaconing by domain |
+| Bulk allow/deny | Set global defaults (deny all, allow list) or per-app policies |
+| Bandwidth monitor | Identify processes consuming unusual bandwidth (data exfiltration) |
+| System service | Runs as `PortmasterCore` service, survives user logoff |
+
+### Quick Configuration for Competition
+
+1. **Set global default to "Prompt"** -- forces you to approve new outbound connections.
+2. **Allow scored services** -- HTTP/HTTPS, DNS, SSH, RDP, whatever your box serves.
+3. **Block PowerShell and cmd.exe outbound** -- prevents reverse shells from calling home.
+4. **Monitor the connection log** -- look for unexpected destinations or high connection counts.
+
+### Useful Portmaster CLI
+
+```powershell
+# Check service status
+Get-Service PortmasterCore
+
+# Restart Portmaster
+Restart-Service PortmasterCore
+
+# Logs location
+Get-ChildItem "$env:ProgramData\Safing\Portmaster\logs\"
+```
+
+---
+
+## runZero (Formerly Rumble)
+
+**What it is:** Network asset discovery and inventory tool. Scans your network and builds a detailed inventory of every device, OS, open port, and service -- without agents. The free Community Edition supports up to 256 assets.
+
+**Website:** https://www.runzero.com
+
+**Download:** https://www.runzero.com/download
+
+**Account:** Free account required at https://console.runzero.com/signup
+
+### Why It Matters for CCDC
+
+At the start of competition, you inherit an unknown network. runZero can scan the entire subnet and produce a complete inventory in minutes -- OS versions, open ports, services, hostnames, MAC addresses. This feeds directly into your inventory sheets and network diagram.
+
+### Quick Start
+
+1. Create a free account at https://console.runzero.com/signup
+2. Download the Explorer (scanner agent) for your platform
+3. Deploy the Explorer on one host with network access to all subnets
+4. Run a scan of your competition subnet(s)
+5. Export the results as CSV for your inventory sheets
+
+### Key Scan Output
+
+- Hostname, IP, MAC address
+- Operating system and version
+- Open TCP/UDP ports and service banners
+- SSL/TLS certificate details
+- Hardware vendor (from MAC OUI)
+- Detected vulnerabilities
+
+---
+
+## simplewall (Lightweight Alternative to Portmaster)
+
+**What it is:** Free, open-source, portable firewall under 2 MB. Uses WFP directly (independent of Windows Firewall). Includes built-in Windows telemetry blocklist. No installation required -- just run the executable.
+
+**Website:** https://simplewall.net
+
+**GitHub:** https://github.com/henrypp/simplewall
+
+**When to use instead of Portmaster:** When you need a smaller, faster-to-deploy firewall on boxes where Portmaster's 300 MB offline installer is impractical. simplewall is a single portable EXE.
+
+---
+
+## Online Resources Reference
+
+### Threat Intelligence and IOC Lookup
+
+| Resource | URL | Purpose |
+|---|---|---|
+| VirusTotal | https://www.virustotal.com | Scan files, hashes, URLs, domains against 70+ AV engines |
+| AbuseIPDB | https://www.abuseipdb.com | Check/report abusive IP addresses (1000 free queries/day) |
+| Cisco Talos | https://www.talosintelligence.com/reputation_center | IP, domain, and URL reputation lookup |
+| GreyNoise | https://www.greynoise.io | Identify mass-scanning IPs vs. targeted attacks |
+| Shodan | https://www.shodan.io | Search engine for internet-exposed services and ports |
+| Censys | https://search.censys.io | Host/service search with certificate and vuln data |
+| URLhaus | https://urlhaus.abuse.ch | Database of malicious URLs used for malware distribution |
+| URLScan.io | https://urlscan.io | Analyze what a website loads, where it redirects |
+| Malware Bazaar | https://bazaar.abuse.ch | Malware sample sharing and hash lookup |
+| ThreatFox | https://threatfox.abuse.ch | IOC sharing platform (hashes, IPs, domains) |
+| AlienVault OTX | https://otx.alienvault.com | Open threat intelligence with 19M+ indicators |
+| Pulsedive | https://pulsedive.com | Free threat intel enriching IPs, domains, URLs |
+
+: {tbl-colwidths="[20,40,40]"}
+
+### Vulnerability Databases
+
+| Resource | URL | Purpose |
+|---|---|---|
+| NIST NVD | https://nvd.nist.gov | U.S. government CVE database with severity scores |
+| CVE.org | https://www.cve.org | Official CVE identifier lookup |
+| CVE Details | https://www.cvedetails.com | CVE database with advisories, exploits, vendor browsing |
+| CISA KEV Catalog | https://www.cisa.gov/known-exploited-vulnerabilities-catalog | Vulns actively exploited in the wild -- patch these first |
+| Exploit-DB | https://www.exploit-db.com | Public exploit archive and Google Hacking Database |
+| Rapid7 Vuln DB | https://www.rapid7.com/db | 180K+ vulns with Metasploit module references |
+
+: {tbl-colwidths="[20,40,40]"}
+
+### Security Configuration Guides
+
+| Resource | URL | Purpose |
+|---|---|---|
+| CIS Benchmarks | https://www.cisecurity.org/cis-benchmarks | Free PDF hardening guides for OSes, servers, cloud |
+| DISA STIGs | https://public.cyber.mil/stigs | DoD hardening guides, freely downloadable |
+| MS Security Baselines | https://learn.microsoft.com/en-us/windows/security/operating-system-security/device-management/windows-security-configuration-framework/windows-security-baselines | Recommended GPO settings for Windows |
+| MS Security Compliance Toolkit | https://www.microsoft.com/en-us/download/details.aspx?id=55319 | Download, compare, apply MS security baselines |
+| NIST Checklists | https://nvd.nist.gov/ncp | 800+ security config checklists for 200+ systems |
+| MITRE ATT\&CK | https://attack.mitre.org | Adversary tactics and techniques knowledge base |
+
+: {tbl-colwidths="[20,40,40]"}
+
+### Log Analysis and Decoding
+
+| Resource | URL | Purpose |
+|---|---|---|
+| CyberChef | https://gchq.github.io/CyberChef | Decode Base64, analyze payloads, convert formats |
+| Regex101 | https://regex101.com | Online regex tester with real-time explanation |
+| Ultimate Win Security | https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/ | Windows Security Event ID encyclopedia |
+| MyEventLog | https://www.myeventlog.com | Windows event log message database |
+| MS Events to Monitor | https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/appendix-l--events-to-monitor | Critical AD security events list |
+| awesome-event-ids | https://github.com/stuhli/awesome-event-ids | Curated important Windows Event IDs |
+| Win Event Log Analyst PDF | https://forwarddefense.com/media/attachments/2021/05/15/windows-event-log-analyst-reference.pdf | Printable event log analysis reference |
+
+: {tbl-colwidths="[20,40,40]"}
+
+### Network Tools
+
+| Resource | URL | Purpose |
+|---|---|---|
+| MXToolbox | https://mxtoolbox.com | DNS, MX, blacklist, SMTP diagnostics |
+| NSLookup.io | https://www.nslookup.io | Web-based DNS client for all record types |
+| DNS Checker | https://dnschecker.org | DNS propagation check plus 30+ network tools |
+| SSL Labs | https://www.ssllabs.com/ssltest | Deep SSL/TLS config analysis, grades A-F |
+| NetworkCalc | https://networkcalc.com | Subnet calculator, DNS, WHOIS, SSL tools |
+| ICANN WHOIS | https://lookup.icann.org | Official domain registration lookup |
+
+: {tbl-colwidths="[20,40,40]"}
+
+### Malware Analysis
+
+| Resource | URL | Purpose |
+|---|---|---|
+| ANY.RUN | https://any.run | Interactive malware sandbox with real-time observation |
+| Hybrid Analysis | https://hybrid-analysis.com | Free automated malware analysis (CrowdStrike) |
+| Joe Sandbox | https://www.joesandbox.com | Automated analysis on Windows, macOS, Linux |
+| YARAify | https://yaraify.abuse.ch | Scan files against YARA rule repository online |
+| Yara-Rules | https://github.com/Yara-Rules/rules | Community YARA signature repository |
+
+: {tbl-colwidths="[20,40,40]"}
+
+### Documentation and Reference
+
+| Resource | URL | Purpose |
+|---|---|---|
+| SS64 | https://ss64.com | A-Z command reference for CMD, PowerShell, Bash |
+| ExplainShell | https://explainshell.com | Visual breakdown of any shell command |
+| TLDR Pages | https://tldr.sh | Simplified, example-driven man pages |
+| MS PowerShell Docs | https://learn.microsoft.com/en-us/powershell | Official PowerShell cmdlet reference |
+| Sysinternals Live | https://live.sysinternals.com | Run Sysinternals tools directly from web |
+
+: {tbl-colwidths="[20,40,40]"}
+
+### CCDC Community Resources
+
+| Resource | URL | Purpose |
+|---|---|---|
+| awesome-cybersecurity-blueteam | https://github.com/fabacab/awesome-cybersecurity-blueteam | Curated blue team tools and frameworks |
+| A-poc/BlueTeam-Tools | https://github.com/A-poc/BlueTeam-Tools | 65+ IR and blue team tools |
+| awesome-security-hardening | https://github.com/decalage2/awesome-security-hardening | Hardening guides, benchmarks, checklists |
+| C0nd4/CCDC-Blueteam-Manual | https://github.com/C0nd4/CCDC-Blueteam-Manual | Blue team manual for CCDC |
+| Missouri-State CCDC | https://github.com/Missouri-State-CCDC-Team/mwccdc | Splunk dashboards, Ansible, templates |
+| CyberLions/CCDC | https://github.com/CyberLions/CCDC | Penn State CCDC scripts and tools |
+| GitHub blue-team topic | https://github.com/topics/blue-team | Browse all blue-team tagged repos |
+
+: {tbl-colwidths="[20,40,40]"}
+
+\newpage
+
+---
+
+# Microsoft Sysinternals Suite
+
+**Download the full suite:** https://learn.microsoft.com/en-us/sysinternals/downloads/sysinternals-suite
+
+**Live web access (no download):** `\\live.sysinternals.com\tools\` or https://live.sysinternals.com
+
+**Deploy to multiple machines:** Copy the extracted suite folder to a network share or SYSVOL, then run tools directly from `\\server\share\SysinternalsSuite\`.
+
+**Install methods:**
+
+- **Direct download (ZIP):** https://download.sysinternals.com/files/SysinternalsSuite.zip (~45 MB)
+- **Chocolatey:** `choco install sysinternals`
+- **Winget:** `winget install Microsoft.Sysinternals.Suite`
+- **UNC live path:** `net use S: \\live.sysinternals.com\DavWWWRoot` (requires WebDAV client service)
+
+All tools are portable (no installation required). Extract and run. Always use `-accepteula` on first run to suppress the EULA dialog in scripts.
+
+## Process and System Monitoring
+
+### Process Explorer (`procexp64.exe`)
+
+**What:** Advanced Task Manager replacement. Shows process tree, DLLs loaded by each process, handles, TCP/IP connections, GPU usage, and VirusTotal integration.
+
+**Blue team use:** Identify suspicious processes, find hidden malware injected into legitimate processes, see which DLLs a process has loaded, check process signatures.
+
+```
+procexp64.exe /t          # Start minimized to tray
+procexp64.exe /e          # Start with Everyone access
+```
+
+**Key actions:**
+
+- **Options > VirusTotal.com > Check VirusTotal.com** -- submits hashes of all running processes
+- **View > Show Lower Pane** -- shows DLLs/handles for selected process
+- **Find > Find Handle or DLL** -- search for which process has a file/registry key open
+- Right-click process > **Properties > TCP/IP** -- see network connections for that process
+- **Ctrl+D** = DLL view, **Ctrl+H** = Handle view
+- **Color codes:** Purple = packed/encrypted image (suspicious), Pink = services, Blue = your own processes, Dark gray = suspended
+
+### Process Monitor (`procmon64.exe`)
+
+**What:** Real-time file system, registry, and process/thread activity monitor. Captures every operation with full call stacks.
+
+**Blue team use:** Watch what a suspicious process is doing -- what files it reads/writes, what registry keys it touches, what network connections it makes. Essential for malware analysis.
+
+```
+procmon64.exe /AcceptEula /BackingFile C:\logs\procmon.pml
+procmon64.exe /Quiet /Minimized /BackingFile C:\logs\procmon.pml
+```
+
+**Key filters:**
+
+- **Process Name is** `powershell.exe` -- watch PowerShell activity
+- **Operation is** `WriteFile` -- see all file writes
+- **Path contains** `\Run\` -- watch autorun registry keys
+- **Result is** `ACCESS DENIED` -- find permission issues
+
+### Autoruns (`autoruns64.exe` / `autorunsc64.exe`)
+
+**What:** Shows everything configured to run at startup or login. Covers registry Run keys, services, scheduled tasks, drivers, Winsock providers, DLLs, boot execute entries, image hijacks, and more. The most comprehensive autostart viewer available.
+
+**Blue team use:** Find persistence mechanisms planted by red team. Compare against a known-good baseline.
+
+```
+:: GUI version
+autoruns64.exe
+
+:: CLI version -- export to CSV for diffing
+autorunsc64.exe -a * -c -h -s -v -vt > C:\logs\autoruns.csv
+
+:: Compare two snapshots
+:: (Use File > Compare in GUI to diff against saved .arn file)
+```
+
+**Flags for `autorunsc64.exe`:**
+
+| Flag | Purpose |
+|---|---|
+| `-a *` | Show all categories |
+| `-c` | CSV output |
+| `-h` | Show file hashes |
+| `-s` | Verify digital signatures |
+| `-v` | Verify with VirusTotal |
+| `-vt` | Accept VirusTotal TOS |
+| `-m` | Hide Microsoft-signed entries |
+
+**Startup categories checked:** Logon, Explorer, Internet Explorer, Services, Drivers, Scheduled Tasks, AppInit DLLs, Boot Execute, Image Hijacks, KnownDLLs, Winsock Providers, Print Monitors, LSA Providers, Network Providers, WMI, Office, Sidebar Gadgets, Codecs.
+
+### Sysmon (`sysmon64.exe`)
+
+**What:** System Monitor service that logs detailed process creation, network connections, file creation time changes, driver/image loads, raw disk access, process memory access, and more to the Windows Event Log.
+
+**Blue team use:** Provides the detailed telemetry needed to detect attacker activity. Once installed with a config, it continuously logs to `Microsoft-Windows-Sysmon/Operational`.
+
+```
+:: Install with config
+sysmon64.exe -accepteula -i sysmonconfig.xml
+
+:: Update config
+sysmon64.exe -c sysmonconfig.xml
+
+:: Uninstall
+sysmon64.exe -u
+```
+
+**Recommended configs:**
+
+- SwiftOnSecurity: https://github.com/SwiftOnSecurity/sysmon-config
+- Olaf Hartong: https://github.com/olafhartong/sysmon-modular
+
+**Key Event IDs:**
+
+| Event ID | What It Logs |
+|---|---|
+| 1 | Process creation (with command line, hashes, parent process) |
+| 3 | Network connection (source/dest IP, port, process) |
+| 7 | Image loaded (DLL loading) |
+| 8 | CreateRemoteThread (process injection) |
+| 10 | ProcessAccess (credential dumping, e.g., LSASS access) |
+| 11 | FileCreate |
+| 13 | RegistryEvent (value set) |
+| 2 | File creation time changed (timestomping detection) |
+| 6 | Driver loaded (rootkit driver detection) |
+| 22 | DNSEvent (DNS query with process) |
+| 23 | File delete archived |
+| 25 | Process tampering |
+
+**Logs location:** Event Viewer > Applications and Services Logs > Microsoft > Windows > Sysmon > Operational
+
+### ProcDump (`procdump64.exe`)
+
+**What:** Command-line crash dump utility. Captures memory dumps of processes based on triggers (CPU threshold, hang, exception, or manual).
+
+**Blue team use:** Dump a suspicious process's memory for offline analysis before killing it. Preserve evidence of malware.
+
+```
+:: Full memory dump of suspicious process
+procdump64.exe -accepteula -ma <PID> C:\evidence\
+
+:: Dump when CPU exceeds 90%
+procdump64.exe -accepteula -ma -c 90 <PID> C:\evidence\
+
+:: Dump on process termination (catch what it does last)
+procdump64.exe -accepteula -ma -t <PID> C:\evidence\
+```
+
+### BgInfo (`bginfo64.exe`)
+
+**What:** Sets desktop wallpaper to display system information: hostname, IP address, OS version, domain, uptime, etc.
+
+**Blue team use:** When RDP'ing between 8+ machines during competition, BgInfo lets you instantly identify which host you are on. Deploy to all machines at competition start.
+
+```
+:: Apply config silently (create .bgi file in GUI first, then deploy)
+bginfo64.exe config.bgi /timer:0 /nolicprompt /silent
+```
+
+## Network Tools
+
+### TCPView (`tcpview64.exe`)
+
+**What:** GUI showing all TCP and UDP endpoints with owning process, state, and bytes transferred. Real-time updates.
+
+**Blue team use:** Instantly see which processes have active network connections and to where. Spot reverse shells, C2 beacons, and unauthorized listeners.
+
+```
+tcpview64.exe
+```
+
+**Key features:**
+
+- Red = new connection, Yellow = state change, Green = closing
+- Right-click > End Process to kill suspicious connections
+- Right-click > Close Connection to reset a specific TCP connection
+- File > Save to export current state
+
+**CLI version** (`tcpvcon64.exe`) for scripting:
+
+```
+tcpvcon64.exe -accepteula -a -c -n > C:\baseline-connections.csv
+```
+
+### PsPing (`psping64.exe`)
+
+**What:** TCP ping, latency, and bandwidth measurement tool. Tests TCP connectivity to specific ports (unlike ICMP ping which only tests basic reachability).
+
+**Blue team use:** Test if a service port is actually reachable through firewalls.
+
+```
+psping64.exe -t server:3389          # TCP ping to RDP port
+psping64.exe -t server:443 -i 5     # Ping every 5 seconds
+```
+
+## Security and Access Tools
+
+### AccessChk (`accesschk64.exe`)
+
+**What:** Shows effective permissions for users/groups on files, directories, registry keys, services, and kernel objects.
+
+**Blue team use:** Find weak permissions on services (unquoted paths, writable service binaries), world-writable directories, and misconfigured registry keys.
+
+```
+:: Check permissions on all services
+accesschk64.exe -accepteula -ucqv *
+
+:: Find services writable by Authenticated Users
+accesschk64.exe -accepteula -uwcqv "Authenticated Users" *
+
+:: Check write access to a directory
+accesschk64.exe -accepteula -uwdq "C:\Program Files"
+
+:: Check registry key permissions
+accesschk64.exe -accepteula -k HKLM\Software
+```
+
+### AccessEnum (`AccessEnum.exe`)
+
+**What:** GUI tool that shows permissions on directories, files, and registry keys, highlighting where permissions diverge from parent.
+
+**Blue team use:** Quickly audit file system permissions to find where non-admin users have write access to sensitive directories.
+
+### Sigcheck (`sigcheck64.exe`)
+
+**What:** Verifies digital signatures on files, shows version info, and can submit hashes to VirusTotal.
+
+**Blue team use:** Verify that system binaries have valid Microsoft signatures. Find unsigned or tampered executables.
+
+```
+:: Check all unsigned EXEs in System32
+sigcheck64.exe -accepteula -u -e C:\Windows\System32
+
+:: Check all unsigned EXEs recursively
+sigcheck64.exe -accepteula -u -s -e C:\Windows
+
+:: Submit to VirusTotal
+sigcheck64.exe -accepteula -v -vt C:\suspicious\file.exe
+```
+
+### LogonSessions (`logonsessions64.exe`)
+
+**What:** Lists all active logon sessions with their type, authentication package, logon time, and username.
+
+**Blue team use:** Find unexpected logon sessions (red team lateral movement, pass-the-hash).
+
+```
+logonsessions64.exe -accepteula -p    # Include processes per session
+```
+
+### ShareEnum (`ShareEnum.exe`)
+
+**What:** Scans the network for shared folders and shows their permissions.
+
+**Blue team use:** Find open shares with weak ACLs that could be used for lateral movement or data exfiltration.
+
+### Handle (`handle64.exe`)
+
+**What:** Shows which processes have open handles to files, registry keys, or other objects.
+
+**Blue team use:** Find which process is locking a file (cannot delete red team tool because something holds it open). Find processes with handles to sensitive files like SAM or SYSTEM hive.
+
+```
+handle64.exe -accepteula -p suspicious.exe
+handle64.exe -accepteula SAM               # Who has SAM open?
+```
+
+### ListDLLs (`listdlls64.exe`)
+
+**What:** Lists all DLLs loaded by a process, including load addresses and version info.
+
+**Blue team use:** Detect DLL injection or sideloading. Look for DLLs loaded from unusual paths (Temp, AppData, Downloads).
+
+```
+:: Show all unsigned DLLs across all processes
+listdlls64.exe -accepteula -u
+
+:: Search for processes that loaded a specific DLL
+listdlls64.exe -accepteula -d evil.dll
+```
+
+### Strings (`strings64.exe`)
+
+**What:** Extracts printable ASCII and Unicode strings from binary files.
+
+**Blue team use:** Quick triage of suspicious binaries. Look for URLs, IP addresses, command strings, registry paths.
+
+```
+strings64.exe -accepteula suspicious.exe | findstr /i "http:// https:// cmd powershell"
+```
+
+## File and Disk Tools
+
+### Streams (`streams64.exe`)
+
+**What:** Shows NTFS alternate data streams (ADS) on files. ADS can hide data or executables within normal files.
+
+**Blue team use:** Detect hidden payloads in alternate data streams.
+
+```
+:: Scan a directory recursively
+streams64.exe -accepteula -s C:\Users\
+
+:: Delete all ADS in a directory
+streams64.exe -accepteula -s -d C:\Users\Public\
+```
+
+### SDelete (`sdelete64.exe`)
+
+**What:** Secure file deletion (overwrite before delete) and free-space wiping.
+
+**Blue team use:** Securely remove sensitive files (PII found during competition) or wipe temp files attackers may have left.
+
+```
+sdelete64.exe -accepteula -p 1 C:\temp\malware.exe
+sdelete64.exe -accepteula -z C:           # Zero free space
+```
+
+### Du (`du64.exe`)
+
+**What:** Shows disk usage by directory, sorted by size.
+
+**Blue team use:** Find unexpectedly large directories (data staging areas, exfiltration caches).
+
+```
+du64.exe -accepteula -l 2 C:\Users       # Depth 2
+```
+
+### Disk2vhd (`disk2vhd64.exe`)
+
+**What:** Creates VHD/VHDX virtual disk images from live physical disks using Volume Shadow Copy.
+
+**Blue team use:** Forensic imaging of a compromised machine without taking it offline. Image first, analyze later.
+
+```
+disk2vhd64.exe -accepteula * C:\evidence\image.vhdx
+```
+
+## System Information and Remote Tools
+
+### PsExec (`psexec64.exe`)
+
+**What:** Execute processes remotely on other Windows machines via SMB (admin shares).
+
+**Blue team use:** Push commands, scripts, or tools to multiple machines without RDP. Deploy Sysmon, run Autoruns, push firewall rules.
+
+```
+:: Run command on remote machine
+psexec64.exe \\server -u DOMAIN\admin -p password cmd /c ipconfig
+
+:: Run on multiple machines
+psexec64.exe \\server1,server2 -u admin -p pass -c autoruns64.exe
+
+:: Copy and execute local tool on remote machine
+psexec64.exe \\server -c -f sysmon64.exe -accepteula -i config.xml
+
+:: Run interactively
+psexec64.exe \\server -i -d cmd.exe
+
+:: Run as SYSTEM locally (useful for testing)
+psexec64.exe -s cmd.exe
+```
+
+### PsInfo (`psinfo64.exe`)
+
+**What:** Shows system information: OS version, uptime, install date, kernel build, processor, physical memory, hotfixes.
+
+```
+psinfo64.exe \\server -u admin -p pass
+```
+
+### PsList (`pslist64.exe`)
+
+**What:** Remote process lister (like `tasklist` but works over the network).
+
+```
+pslist64.exe \\server -u admin -p pass
+pslist64.exe \\server -t        # Show process tree
+```
+
+### PsService (`psservice64.exe`)
+
+**What:** Remote service viewer/controller.
+
+```
+psservice64.exe \\server query          # List all services
+psservice64.exe \\server stop MalSvc    # Stop a service
+psservice64.exe \\server config MalSvc  # Show service config
+```
+
+### PsLoggedOn (`psloggedon64.exe`)
+
+**What:** Shows who is logged on locally and via resource shares.
+
+```
+psloggedon64.exe \\server
+```
+
+### PsKill (`pskill64.exe`)
+
+**What:** Kill a process by name or PID on a local or remote system.
+
+```
+pskill64.exe \\server powershell.exe
+pskill64.exe \\server -t 1234          # Kill process tree
+```
+
+### PsPasswd (`pspasswd64.exe`)
+
+**What:** Change account passwords on local and remote systems. Works across multiple machines.
+
+**Blue team use:** Mass password changes across all machines in the first 15 minutes.
+
+```
+:: Change local admin password on all domain machines
+pspasswd64.exe \\* -u DOMAIN\admin -p oldpass Administrator N3wP@ssw0rd!
+
+:: Change on specific machine
+pspasswd64.exe \\DC01 Administrator N3wP@ssw0rd!
+```
+
+### PsSuspend (`pssuspend64.exe`)
+
+**What:** Suspend and resume processes without killing them.
+
+**Blue team use:** Freeze a suspicious process to preserve its state for analysis (memory dump with ProcDump) before killing it.
+
+```
+pssuspend64.exe suspicious.exe          # Suspend
+pssuspend64.exe -r suspicious.exe       # Resume
+```
+
+### PsLogList (`psloglist64.exe`)
+
+**What:** Dump event logs from local or remote systems to text.
+
+**Blue team use:** Collect event logs from all machines to a central location for analysis.
+
+```
+:: Dump last 1000 Security events from remote machine
+psloglist64.exe \\DC01 -n 1000 Security > DC01-security.txt
+
+:: Dump from last 2 days
+psloglist64.exe \\DC01 -d 2 Security > DC01-security-2d.txt
+```
+
+## Additional Useful Tools
+
+| Tool | Purpose |
+|---|---|
+| `Coreinfo.exe` | Show CPU/cache topology and security features (DEP, VT-x, NX) |
+| `PendMoves64.exe` | Show pending file rename/delete operations (scheduled for reboot) |
+| `Whois64.exe` | WHOIS lookup from command line |
+| `vmmap64.exe` | Show virtual memory layout of a process |
+| `RAMMap.exe` | Advanced physical memory usage analysis |
+| `FindLinks64.exe` | Find hard links to a file (detect hardlink-based evasion) |
+| `WinObj.exe` | Object Manager namespace browser (reveal hidden devices/drivers) |
+
+## CCDC Priority Order
+
+Deploy in this order at competition start:
+
+1. **Sysmon** -- Install with SwiftOnSecurity config on every box
+2. **Autoruns** -- Baseline all autostart locations, export CSV
+3. **Sigcheck** -- Scan System32 and user directories for unsigned executables
+4. **PsPasswd** -- Mass password change across all machines
+5. **Process Explorer** -- Visual triage of running processes, VirusTotal check
+6. **TCPView** -- Baseline network connections
+7. **BgInfo** -- Set on all machines for quick identification
+8. **AccessChk** -- Audit service permissions
+9. **PsExec** -- Primary remote administration tool
+10. **LogonSessions** -- Check for unauthorized sessions
+
+## Rapid Deployment Script
+
+Deploy Sysinternals + Sysmon across multiple machines:
+
+```powershell
+$tools = "\\DC01\NETLOGON\SysinternalsSuite"
+$config = "\\DC01\NETLOGON\sysmonconfig.xml"
+$targets = @("WEB01","DB01","MAIL01","DNS01")
+
+foreach ($target in $targets) {
+    # Copy tools
+    Copy-Item $tools "\\$target\C$\Tools\Sysinternals" -Recurse -Force
+
+    # Install Sysmon remotely
+    Invoke-Command -ComputerName $target -ScriptBlock {
+        & "C:\Tools\Sysinternals\sysmon64.exe" -accepteula -i "C:\Tools\sysmonconfig.xml"
+    }
+
+    # Run Autoruns baseline
+    & "$tools\psexec64.exe" "\\$target" -accepteula `
+        C:\Tools\Sysinternals\autorunsc64.exe -a * -c -h -s `
+        > "C:\baselines\$target-autoruns.csv"
+}
+```
+
+\newpage
+
+---
+
+# Windows Tools Beyond Sysinternals
+
+## Built-In Windows Security Commands
+
+### PowerShell Security Cmdlets
+
+```powershell
+# ---- Process and Network ----
+Get-Process | Sort-Object CPU -Descending | Select -First 20
+Get-NetTCPConnection -State Established | Sort-Object RemotePort
+Get-NetTCPConnection -State Listen
+Get-NetUDPEndpoint
+
+# ---- Scheduled Tasks (persistence) ----
+Get-ScheduledTask | Where-Object {$_.State -eq "Ready"}
+Get-ScheduledTask | Select TaskName,TaskPath,State | Format-Table -Auto
+schtasks /query /fo CSV /v > C:\baseline\tasks.csv
+
+# ---- Services ----
+Get-Service | Where-Object {$_.Status -eq "Running"} | Sort-Object DisplayName
+Get-WmiObject Win32_Service | Select Name,StartName,PathName,State | Export-Csv C:\baseline\services.csv
+
+# ---- Installed Software ----
+Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |
+    Select DisplayName,DisplayVersion,Publisher | Sort DisplayName
+
+# ---- Local Users and Groups ----
+Get-LocalUser | Select Name,Enabled,LastLogon
+Get-LocalGroupMember -Group "Administrators"
+
+# ---- AD Users and Groups (on DCs) ----
+Get-ADUser -Filter * -Properties Enabled,LastLogonDate |
+    Select Name,Enabled,LastLogonDate | Sort LastLogonDate
+Get-ADGroupMember "Domain Admins" | Select Name
+Get-ADGroupMember "Enterprise Admins" | Select Name
+
+# ---- Firewall ----
+Get-NetFirewallProfile | Select Name,Enabled
+Get-NetFirewallRule -Enabled True -Direction Inbound |
+    Select DisplayName,Action,Profile | Format-Table -Auto
+
+# ---- Shares ----
+Get-SmbShare | Select Name,Path,Description
+Get-SmbShareAccess -Name "ShareName"
+
+# ---- DNS Cache ----
+Get-DnsClientCache | Select Entry,Data
+
+# ---- Recently Modified Files ----
+Get-ChildItem C:\Users -Recurse -File |
+    Where-Object {$_.LastWriteTime -gt (Get-Date).AddHours(-24)} |
+    Select FullName,LastWriteTime | Sort LastWriteTime -Descending
+```
+
+### Windows Defender CLI (`MpCmdRun.exe`)
+
+```powershell
+# Full path (run as admin)
+$mp = "$env:ProgramFiles\Windows Defender\MpCmdRun.exe"
+
+# Update signatures
+& $mp -SignatureUpdate
+
+# Quick scan
+& $mp -Scan -ScanType 1
+
+# Full scan
+& $mp -Scan -ScanType 2
+
+# Scan specific path
+& $mp -Scan -ScanType 3 -File "C:\Users\Public"
+
+# Check Defender status
+Get-MpComputerStatus | Select AntivirusEnabled,RealTimeProtectionEnabled,
+    AntivirusSignatureLastUpdated
+
+# Add exclusion (if Defender is blocking a legitimate tool)
+Add-MpPreference -ExclusionPath "C:\Tools"
+
+# Remove exclusion
+Remove-MpPreference -ExclusionPath "C:\Tools"
+
+# List current exclusions (red team may have added some)
+Get-MpPreference | Select ExclusionPath,ExclusionProcess,ExclusionExtension
+```
+
+### auditpol.exe (Audit Policy)
+
+```powershell
+# Show current audit policy
+auditpol /get /category:*
+
+# Enable full auditing (recommended for CCDC)
+auditpol /set /category:"Account Logon" /success:enable /failure:enable
+auditpol /set /category:"Account Management" /success:enable /failure:enable
+auditpol /set /category:"Logon/Logoff" /success:enable /failure:enable
+auditpol /set /category:"Object Access" /success:enable /failure:enable
+auditpol /set /category:"Policy Change" /success:enable /failure:enable
+auditpol /set /category:"Privilege Use" /success:enable /failure:enable
+auditpol /set /category:"System" /success:enable /failure:enable
+auditpol /set /category:"Detailed Tracking" /success:enable /failure:enable
+
+# Export policy (baseline)
+auditpol /backup /file:C:\baseline\auditpol.csv
+```
+
+### wevtutil (Event Log Management)
+
+```powershell
+# List all event logs
+wevtutil el
+
+# Export Security log to file
+wevtutil epl Security C:\evidence\security.evtx
+
+# Query recent failed logons (Event 4625)
+wevtutil qe Security /q:"*[System[(EventID=4625)]]" /c:50 /f:text
+
+# Clear a log (use with caution -- save first)
+wevtutil cl Security
+
+# Check log size
+wevtutil gl Security
+```
+
+### certutil (Certificate and Hash Operations)
+
+```powershell
+# Hash a file (verify integrity)
+certutil -hashfile C:\suspicious.exe SHA256
+
+# Download a file (alternative to curl/wget)
+certutil -urlcache -split -f http://example.com/file.exe C:\temp\file.exe
+
+# List installed certificates
+certutil -store My
+certutil -store Root
+
+# Decode Base64 file
+certutil -decode encoded.txt decoded.bin
+```
+
+### netsh (Firewall and Network)
+
+```powershell
+# ---- Firewall ----
+# Show all firewall rules
+netsh advfirewall firewall show rule name=all
+
+# Block an IP
+netsh advfirewall firewall add rule name="Block Attacker" dir=in action=block remoteip=10.0.0.100
+
+# Allow a port
+netsh advfirewall firewall add rule name="Allow HTTP" dir=in action=allow protocol=tcp localport=80
+
+# Export/import firewall rules (baseline and restore)
+netsh advfirewall export C:\baseline\firewall.wfw
+netsh advfirewall import C:\baseline\firewall.wfw
+
+# Reset firewall to defaults
+netsh advfirewall reset
+
+# ---- Network Diagnostics ----
+# Show all interfaces
+netsh interface ipv4 show addresses
+
+# Show ARP table
+netsh interface ipv4 show neighbors
+
+# Show routing table
+netsh interface ipv4 show route
+
+# Capture network traffic (built-in packet capture)
+netsh trace start capture=yes tracefile=C:\evidence\trace.etl
+netsh trace stop
+```
+
+### icacls and takeown (File Permissions)
+
+```powershell
+# View permissions on a file/directory
+icacls C:\Windows\System32\sethc.exe
+
+# Take ownership of a file
+takeown /f C:\path\to\file
+
+# Grant full control to Administrators
+icacls C:\path\to\file /grant Administrators:F
+
+# Remove all permissions for a user
+icacls C:\path\to\file /remove "DOMAIN\baduser"
+
+# Reset permissions to inherited defaults
+icacls C:\path\to\directory /reset /t /c
+```
+
+### secedit (Security Policy)
+
+```powershell
+# Export current security policy
+secedit /export /cfg C:\baseline\secpol.cfg
+
+# Analyze against a template
+secedit /analyze /db C:\temp\analysis.sdb /cfg C:\baseline\secpol.cfg
+
+# Apply a security template
+secedit /configure /db C:\temp\apply.sdb /cfg C:\hardened\secpol.cfg
+```
+
+### WMIC (Windows Management Instrumentation CLI)
+
+WMIC is deprecated but still present on all Windows versions through Server 2022. Extremely useful for quick enumeration.
+
+```powershell
+# ---- Process Enumeration ----
+wmic process list brief
+wmic process where "name='powershell.exe'" get ProcessId,CommandLine
+
+# ---- Startup Programs ----
+wmic startup list full
+
+# ---- Installed Software ----
+wmic product get Name,Version,Vendor
+
+# ---- Services ----
+wmic service where "state='running'" get Name,DisplayName,PathName,StartMode
+
+# ---- Find services running as specific accounts ----
+wmic service where "StartName!='LocalSystem'" get Name,StartName,PathName
+
+# ---- Shares ----
+wmic share get Name,Path,Description
+
+# ---- User Accounts ----
+wmic useraccount get Name,SID,Status,Disabled,PasswordRequired
+
+# ---- Network ----
+wmic nicconfig where "IPEnabled=True" get Description,IPAddress,MACAddress
+
+# ---- OS Info ----
+wmic os get Caption,Version,BuildNumber,OSArchitecture,LastBootUpTime
+
+# ---- Logical Disks ----
+wmic logicaldisk get Name,Description,FileSystem,Size,FreeSpace
+
+# ---- Remote execution (if WMI is accessible) ----
+wmic /node:"TARGET_IP" /user:"admin" process call create "cmd /c ipconfig > C:\out.txt"
+```
+
+### perfmon and logman (Performance Monitoring)
+
+Built-in performance data collection. Useful for detecting resource abuse and establishing baselines.
+
+```powershell
+# ---- Quick Performance Checks ----
+# CPU and memory per process (like Task Manager in CLI)
+Get-Process | Sort-Object CPU -Descending | Select-Object -First 15 Name,Id,CPU,WS
+
+# ---- Data Collector Sets with logman ----
+# Create a collector for CPU, memory, disk, network
+logman create counter "CCDC_Baseline" -c "\Processor(_Total)\% Processor Time" "\Memory\Available MBytes" "\PhysicalDisk(_Total)\% Disk Time" "\Network Interface(*)\Bytes Total/sec" -si 5 -f csv -o C:\PerfLogs\baseline.csv
+
+# Start collection
+logman start "CCDC_Baseline"
+
+# Stop collection
+logman stop "CCDC_Baseline"
+
+# Delete collector set
+logman delete "CCDC_Baseline"
+
+# List all collector sets
+logman query
+
+# ---- typeperf (real-time counter output) ----
+# Watch CPU in real time
+typeperf "\Processor(_Total)\% Processor Time" -si 2
+
+# Watch specific process memory
+typeperf "\Process(svchost)\Working Set" -si 5
+
+# List all available counters (huge list)
+typeperf -q > C:\counters.txt
+```
+
+### Windows Event Forwarding (WEF)
+
+Built-in centralized log collection. Forwards events from member machines to a collector without third-party agents.
+
+```powershell
+# ---- On the Collector (your monitoring box) ----
+# Enable the Windows Event Collector service
+wecutil qc /q
+
+# Create a subscription (XML-based)
+# Save this as C:\WEF\subscription.xml, then:
+wecutil cs C:\WEF\subscription.xml
+
+# List subscriptions
+wecutil es
+
+# Check subscription status
+wecutil gs "YourSubscriptionName"
+
+# Retry subscription
+wecutil rs "YourSubscriptionName"
+
+# ---- On Source Machines (via GPO or manually) ----
+# Enable WinRM
+winrm quickconfig -q
+
+# Add the collector to the event log readers group
+# Or configure via GPO:
+#   Computer Config > Admin Templates > Windows Components >
+#   Event Forwarding > Configure target Subscription Manager
+#   Value: Server=http://COLLECTOR_FQDN:5985/wsman/SubscriptionManager/WEC
+
+# ---- Verify events are flowing ----
+# On collector, check Forwarded Events log
+wevtutil qe ForwardedEvents /c:5 /f:text
+```
+
+### Windows Sandbox
+
+Built-in disposable VM (Windows 10/11 Pro and Enterprise, Server 2019+). Opens a clean Windows instance that is destroyed on close. Useful for testing suspicious files, running untrusted tools, or testing configurations.
+
+```powershell
+# Enable Windows Sandbox (requires reboot)
+Enable-WindowsOptionalFeature -FeatureName "Containers-DisposableClientVM" -Online
+
+# Launch (after reboot)
+# Start menu > "Windows Sandbox" or:
+WindowsSandbox.exe
+
+# Automate with a .wsb config file (save as test.wsb, double-click):
+# <Configuration>
+#   <MappedFolders>
+#     <MappedFolder>
+#       <HostFolder>C:\Tools</HostFolder>
+#       <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\Tools</SandboxFolder>
+#       <ReadOnly>true</ReadOnly>
+#     </MappedFolder>
+#   </MappedFolders>
+#   <LogonCommand>
+#     <Command>explorer.exe C:\Users\WDAGUtilityAccount\Desktop\Tools</Command>
+#   </LogonCommand>
+# </Configuration>
+```
+
+## Third-Party Security Tools
+
+### Chainsaw (Event Log Analysis)
+
+**What:** Fast Windows event log analysis tool. Searches EVTX files using Sigma detection rules and built-in logic to find evidence of attacks. Written in Rust, extremely fast.
+
+**Download:** https://github.com/WithSecureLabs/chainsaw/releases
+
+```powershell
+# Hunt through event logs using Sigma rules
+chainsaw.exe hunt C:\Windows\System32\winevt\Logs\ -s sigma/ --mapping mappings/sigma-event-logs-all.yml
+
+# Search for specific string in event logs
+chainsaw.exe search "mimikatz" C:\Windows\System32\winevt\Logs\
+
+# Dump all event logs to readable format
+chainsaw.exe dump C:\Windows\System32\winevt\Logs\ --json
+```
+
+### Hayabusa (Windows Event Log Fast Forensics)
+
+**What:** Windows event log fast forensics timeline generator. Processes EVTX files with 4000+ Sigma-compatible detection rules. Generates a timeline of suspicious events.
+
+**Download:** https://github.com/Yamato-Security/hayabusa/releases
+
+```powershell
+# Generate timeline from live system
+hayabusa.exe csv-timeline -d C:\Windows\System32\winevt\Logs\ -o timeline.csv
+
+# Generate with minimum alert level
+hayabusa.exe csv-timeline -d C:\Windows\System32\winevt\Logs\ -o timeline.csv -m medium
+
+# Update detection rules
+hayabusa.exe update-rules
+```
+
+### DeepBlueCLI (PowerShell Threat Hunting)
+
+**What:** PowerShell module for threat hunting via Windows Event Logs. Detects attack techniques including password spraying, user creation, service installation, and encoded PowerShell.
+
+**Download:** https://github.com/sans-blue-team/DeepBlueCLI
+
+```powershell
+# Analyze Security log
+.\DeepBlue.ps1 -log Security
+
+# Analyze System log
+.\DeepBlue.ps1 -log System
+
+# Analyze saved EVTX file
+.\DeepBlue.ps1 C:\evidence\security.evtx
+```
+
+### PingCastle (Active Directory Security Audit)
+
+**What:** Audits Active Directory security health. Generates a risk score and detailed report covering trust relationships, privileged accounts, stale objects, GPO issues, and known AD attack paths. Single EXE, no installation.
+
+**Download:** https://www.pingcastle.com/download
+
+```powershell
+# Run health check (produces HTML report)
+PingCastle.exe --healthcheck
+
+# Run specific scanner
+PingCastle.exe --scanner laps_bitlocker
+PingCastle.exe --scanner share
+```
+
+### HardeningKitty (Windows Hardening Audit)
+
+**What:** PowerShell module that audits Windows configuration against CIS, DISA STIG, and Microsoft baselines. Can also apply hardening settings automatically.
+
+**Download:** https://github.com/scipag/HardeningKitty
+
+```powershell
+# Import module
+Import-Module .\HardeningKitty.psm1
+
+# Audit mode (read-only, generates report)
+Invoke-HardeningKitty -Mode Audit -Log
+
+# Apply hardening (changes settings)
+Invoke-HardeningKitty -Mode HailMary
+```
+
+### Loki (IOC Scanner)
+
+**What:** Simple IOC and YARA scanner for endpoints. Scans for known malware hashes, filenames, C2 indicators, and YARA rule matches. Lightweight, portable.
+
+**Download:** https://github.com/Neo23x0/Loki/releases
+
+```powershell
+# Run full scan
+loki.exe
+
+# Scan specific directory
+loki.exe -p C:\Users
+
+# Update signatures
+loki.exe --update
+```
+
+### Eric Zimmerman's Tools (Forensic Analysis)
+
+**What:** Collection of 30+ forensic analysis tools for parsing Windows artifacts: registry hives, NTFS metadata, prefetch files, shimcache, amcache, event logs, and more.
+
+**Download:** https://ericzimmerman.github.io/#!index.md
+
+Key tools:
+
+| Tool | Purpose |
+|---|---|
+| `MFTECmd.exe` | Parse NTFS Master File Table (find deleted files) |
+| `PECmd.exe` | Parse Prefetch files (program execution history) |
+| `RECmd.exe` | Parse registry hives (find persistence, config) |
+| `ShellBagsExplorer` | Parse ShellBags (directory browsing history) |
+| `AmcacheParser.exe` | Parse Amcache (program installation/execution) |
+| `EvtxECmd.exe` | Parse EVTX event logs with timeline output |
+| `Timeline Explorer` | GUI for viewing CSV timelines from other tools |
+
+### DSInternals (AD Password Auditing)
+
+**What:** PowerShell module for AD security auditing. Can check AD passwords against breached password lists, test password quality, and export password hashes for offline auditing.
+
+**Download:** `Install-Module DSInternals -Force`
+
+```powershell
+# Test AD passwords against a breach list (like HaveIBeenPwned)
+$passwords = Get-ADReplAccount -All -Server DC01.domain.local
+Test-PasswordQuality -Account $passwords -WeakPasswordHashesFile pwned-passwords-ntlm.txt
+```
+
+### BloodHound (AD Attack Path Analysis)
+
+**What:** Maps Active Directory trust relationships, group memberships, and permissions to visualize attack paths from any user to Domain Admin. Defenders use it to find and eliminate these paths before attackers do.
+
+**Download:** https://github.com/SpecterOps/BloodHound/releases
+
+```powershell
+# Collect AD data (run SharpHound collector)
+.\SharpHound.exe -c All
+
+# Import the ZIP into BloodHound GUI and analyze paths
+```
+
+### Microsoft Attack Surface Analyzer
+
+**What:** Compares system state before and after software installation or configuration changes. Takes snapshots and diffs them to show what changed (files, ports, services, registry, users, certificates).
+
+**Download:** https://github.com/microsoft/AttackSurfaceAnalyzer/releases
+
+```powershell
+# Take baseline snapshot
+asa.exe collect -a
+
+# Make changes, then take second snapshot
+asa.exe collect -a
+
+# Generate diff report
+asa.exe export-collect
+```
+
+### KAPE (Kroll Artifact Parser and Extractor)
+
+**What:** Forensic triage collection tool. Rapidly collects forensic artifacts (event logs, registry hives, prefetch, browser history, MFT, etc.) from live systems into a portable package for analysis. Pairs with Eric Zimmerman's tools for parsing.
+
+**Download:** https://www.kroll.com/en/services/cyber-risk/incident-response-litigation-support/kroll-artifact-parser-extractor-kape
+
+```powershell
+# Collect common forensic artifacts from C: drive
+kape.exe --tsource C: --tdest C:\KAPEOutput --target !SANS_Triage
+
+# Collect and process with built-in modules
+kape.exe --tsource C: --tdest C:\KAPEOutput --target !SANS_Triage --mdest C:\KAPEOutput\Modules --module !EZParser
+
+# Collect specific targets
+kape.exe --tsource C: --tdest C:\KAPEOutput --target EventLogs,RegistryHives,Prefetch,WebBrowsers
+
+# Collect from remote share (mount evidence drive)
+kape.exe --tsource \\server\share --tdest C:\KAPEOutput --target !SANS_Triage
+
+# Key target groups:
+#   !SANS_Triage   -- comprehensive artifact collection
+#   EventLogs      -- Windows event logs
+#   RegistryHives  -- SAM, SECURITY, SYSTEM, SOFTWARE, ntuser.dat
+#   Prefetch       -- program execution history
+#   $MFT           -- NTFS master file table
+#   WebBrowsers    -- browser history, cookies, cache
+#   Antivirus      -- AV logs (Defender, Symantec, etc.)
+```
+
+### CimSweep (Agentless Remote IR via WMI/CIM)
+
+**What:** PowerShell framework for remote incident response using WMI/CIM. No agent installation required on targets -- works through existing Windows management infrastructure. Ideal for sweeping multiple machines quickly.
+
+**Source:** https://github.com/PowerShellMafia/CimSweep
+
+```powershell
+# Import the module
+Import-Module CimSweep
+
+# Create CIM sessions to remote targets
+$s = New-CimSession -ComputerName DC01,WEB01,FILE01
+
+# ---- Sweep for persistence mechanisms ----
+Get-CSStartMenuEntry -CimSession $s
+Get-CSRegistryAutoStart -CimSession $s
+Get-CSScheduledTaskEntry -CimSession $s
+Get-CSWmiPersistence -CimSession $s
+
+# ---- Sweep for services ----
+Get-CSService -CimSession $s | Where-Object {$_.PathName -notlike "*Windows*"}
+
+# ---- Sweep for processes ----
+Get-CSProcess -CimSession $s | Where-Object {$_.ParentProcessId -ne 0}
+
+# ---- Sweep for network connections ----
+Get-CSTCPConnection -CimSession $s
+
+# ---- File system sweep ----
+Get-CSDirectoryListing -DirectoryPath "C:\Users\Public" -CimSession $s
+Get-CSRegistryValue -Hive HKLM -SubKey "SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -CimSession $s
+```
+
+### Purple Knight (Active Directory Security Assessment)
+
+**What:** Free AD security assessment tool from Semperis. Runs 130+ security checks against Active Directory covering delegation issues, account security, Group Policy, Kerberos, and AD infrastructure weaknesses. Produces an executive-level report with risk scores and remediation guidance.
+
+**Download:** https://www.purple-knight.com/
+
+```
+# Run as Domain Admin on a domain-joined machine
+# 1. Extract the ZIP
+# 2. Run PurpleKnight.exe
+# 3. Select your forest/domain
+# 4. Choose indicator categories to scan:
+#    - Account Security
+#    - AD Delegation
+#    - AD Infrastructure
+#    - Group Policy Security
+#    - Kerberos Security
+# 5. Review HTML/PDF report with risk scores per finding
+#
+# Key findings it catches:
+#   - Kerberoastable accounts with weak passwords
+#   - Unconstrained delegation enabled on computers
+#   - AdminSDHolder permission changes
+#   - DCSync permissions granted to non-DC accounts
+#   - GPO permissions allowing privilege escalation
+#   - Print Spooler running on DCs
+#   - Stale AD objects and dormant admin accounts
+```
+
+### PlumHound (BloodHound Reporting for Blue Teams)
+
+**What:** Reporting engine that sits on top of BloodHound's Neo4j database. Generates actionable blue team reports -- instead of "here's how attackers can reach Domain Admin," PlumHound produces "here are the 10 accounts you should fix first." Turns attack graphs into prioritized remediation lists.
+
+**Source:** https://github.com/PlumHound/PlumHound
+
+```bash
+# Install (requires Python 3, BloodHound/Neo4j running)
+git clone https://github.com/PlumHound/PlumHound.git
+cd PlumHound
+pip3 install -r requirements.txt
+
+# Run default blue team reports
+python3 PlumHound.py -x tasks/default.tasks -s "bolt://localhost:7687" -u neo4j -p "password"
+
+# Run specific task
+python3 PlumHound.py --easy -s "bolt://localhost:7687" -u neo4j -p "password"
+
+# Key reports generated:
+#   - Kerberoastable users ranked by privilege
+#   - Users with paths to Domain Admin
+#   - Computers with unconstrained delegation
+#   - Group nesting issues (circular, excessive depth)
+#   - Admin accounts not in Protected Users group
+#   - Stale computer accounts with elevated privileges
+```
+
+### Microsoft Security Compliance Toolkit (LGPO)
+
+**What:** Official Microsoft tool for applying security baselines via local Group Policy. LGPO.exe imports/exports local policy settings without requiring Active Directory GPOs. The Security Compliance Toolkit also includes recommended baseline GPOs for each Windows version.
+
+**Download:** https://www.microsoft.com/en-us/download/details.aspx?id=55319
+
+```powershell
+# Export current local policy
+LGPO.exe /b C:\Backups\GPO_Backup
+
+# Apply a Microsoft security baseline
+# (extract baseline ZIP, find the GPO folders)
+LGPO.exe /g "C:\Baselines\Win2022-Member-Server\{GUID}"
+
+# Import a specific registry policy file
+LGPO.exe /m C:\Baselines\registry.pol
+
+# Parse a policy file to text (review before applying)
+LGPO.exe /parse /m C:\Baselines\registry.pol > C:\review.txt
+
+# Key baselines available:
+#   Windows Server 2022 (Member Server and DC)
+#   Windows Server 2019 (Member Server and DC)
+#   Windows 11 / Windows 10
+#   Microsoft Edge
+#   Microsoft 365 Apps
+```
+
+## Windows Quick Reference Commands
+
+### Incident Response One-Liners
+
+```powershell
+# Who is logged in right now?
+query user
+
+# What is running and connecting out?
+Get-NetTCPConnection -State Established |
+    Select LocalPort,RemoteAddress,RemotePort,OwningProcess |
+    ForEach-Object { $p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue;
+    $_ | Add-Member -NoteProperty ProcessName -Value $p.ProcessName -PassThru } |
+    Format-Table -Auto
+
+# Find files modified in the last hour
+Get-ChildItem C:\ -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object {$_.LastWriteTime -gt (Get-Date).AddHours(-1)} |
+    Select FullName,LastWriteTime | Sort LastWriteTime -Desc | Select -First 50
+
+# Find unsigned executables in common malware drop locations
+Get-ChildItem C:\Users,C:\Windows\Temp,C:\ProgramData -Recurse -Include *.exe,*.dll -ErrorAction SilentlyContinue |
+    Get-AuthenticodeSignature | Where-Object {$_.Status -ne "Valid"} |
+    Select Path,Status
+
+# Check for hidden/system files in user directories
+Get-ChildItem C:\Users -Recurse -Force -ErrorAction SilentlyContinue |
+    Where-Object {$_.Attributes -match "Hidden"} | Select FullName
+
+# Export all autorun registry keys
+Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" 2>$null
+Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" 2>$null
+Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce" 2>$null
+
+# List all installed hotfixes
+Get-HotFix | Sort InstalledOn -Descending | Select HotFixID,InstalledOn,Description
+
+# Check for WMI persistence (event subscriptions)
+Get-WMIObject -Namespace root\Subscription -Class __EventFilter
+Get-WMIObject -Namespace root\Subscription -Class __EventConsumer
+Get-WMIObject -Namespace root\Subscription -Class __FilterToConsumerBinding
+
+# Check for alternate data streams in a directory
+Get-ChildItem -Path C:\Users\Public -Recurse | ForEach-Object {
+    Get-Item $_.FullName -Stream * | Where-Object Stream -ne ':$DATA'
+}
+```
+
+### Active Directory Quick Commands
+
+```powershell
+# Find accounts with "Password Never Expires"
+Get-ADUser -Filter {PasswordNeverExpires -eq $true} -Properties PasswordNeverExpires |
+    Select Name,PasswordNeverExpires
+
+# Find accounts that haven't logged in for 30 days
+$cutoff = (Get-Date).AddDays(-30)
+Get-ADUser -Filter {LastLogonDate -lt $cutoff} -Properties LastLogonDate |
+    Select Name,LastLogonDate
+
+# Find all accounts with SPN set (Kerberoastable)
+Get-ADUser -Filter {ServicePrincipalName -like "*"} -Properties ServicePrincipalName |
+    Select Name,ServicePrincipalName
+
+# Find accounts with no Kerberos pre-auth (AS-REP roastable)
+Get-ADUser -Filter {DoesNotRequirePreAuth -eq $true} |
+    Select Name,DoesNotRequirePreAuth
+
+# Reset all user passwords in an OU
+Get-ADUser -SearchBase "OU=Users,DC=domain,DC=local" -Filter * |
+    Set-ADAccountPassword -NewPassword (ConvertTo-SecureString "N3wP@ss!" -AsPlainText -Force) -Reset
+
+# Disable all accounts except specific ones
+$keep = @("Administrator","svcadmin","scoring")
+Get-ADUser -Filter {Enabled -eq $true} |
+    Where-Object {$keep -notcontains $_.SamAccountName} |
+    Disable-ADAccount
+
+# Force GPO update on all domain computers
+Get-ADComputer -Filter * | ForEach-Object {
+    Invoke-GPUpdate -Computer $_.Name -Force -RandomDelayInMinutes 0
+}
+
+# Export all GPOs
+Get-GPO -All | ForEach-Object {
+    Backup-GPO -Guid $_.Id -Path C:\baseline\gpo-backups
+}
+```
+
+\newpage
+
+---
+
+# Linux Tools Reference
+
+## Process Monitoring
+
+### htop / atop
+
+**What:** Interactive process viewers. `htop` is a colorful replacement for `top`. `atop` records historical system load and per-process resource usage.
+
+```bash
+# Install
+sudo apt install htop atop    # Debian/Ubuntu
+sudo yum install htop atop    # RHEL/CentOS
+
+# Usage
+htop                          # Interactive process viewer
+atop                          # System + process monitor with history
+atop -r /var/log/atop/atop_20260316   # Replay historical data
+```
+
+**htop key bindings:** `F5` = tree view, `F6` = sort, `F4` = filter by name, `F9` = kill, `t` = tree toggle, `H` = hide user threads.
+
+### ps and pstree
+
+**What:** Process listing and tree visualization. Available on every Linux system.
+
+```bash
+# Full process listing with command lines
+ps auxf
+
+# Show all processes for a specific user
+ps -u www-data
+
+# Process tree
+pstree -p         # With PIDs
+pstree -pa        # With PIDs and arguments
+
+# Find processes by name
+ps aux | grep sshd
+pgrep -la sshd    # Cleaner alternative
+```
+
+### strace
+
+**What:** Trace system calls made by a process. Shows every file open, read, write, network operation, and signal.
+
+```bash
+# Install
+sudo apt install strace       # Debian/Ubuntu
+sudo yum install strace       # RHEL/CentOS
+
+# Trace a running process
+sudo strace -fp $(pgrep suspicious_proc) -e trace=network,file
+
+# Trace a new command
+strace -f -e trace=network curl http://example.com
+
+# Common filters
+-e trace=file          # File operations only
+-e trace=network       # Network calls only
+-e trace=process       # Process creation (fork/exec)
+-e trace=write         # Write calls only
+```
+
+### lsof
+
+**What:** Lists open files, network connections, sockets, and pipes for all processes. One of the most versatile tools on Linux.
+
+```bash
+# All network connections
+sudo lsof -i
+
+# TCP connections only, with numeric ports
+sudo lsof -i TCP -n -P
+
+# Who is listening on port 80?
+sudo lsof -i :80
+
+# All files opened by a specific process
+sudo lsof -p 1234
+
+# All files opened by a specific user
+sudo lsof -u www-data
+
+# Find which process has a file open
+sudo lsof /var/log/syslog
+
+# Find deleted but still-open files (disk space not freed)
+sudo lsof +L1
+```
+
+### /proc Filesystem
+
+**What:** Virtual filesystem exposing kernel and process data in real time. Available on every Linux system without installing anything.
+
+```bash
+# Command line of a process
+cat /proc/<PID>/cmdline | tr '\0' ' '
+
+# Actual binary (symlink -- may differ from what ps shows if replaced)
+ls -la /proc/<PID>/exe
+
+# Environment variables
+cat /proc/<PID>/environ | tr '\0' '\n'
+
+# Open file descriptors
+ls -la /proc/<PID>/fd/
+
+# Network connections for a specific process
+cat /proc/<PID>/net/tcp
+```
+
+### pspy (Unprivileged Process Monitor)
+
+**What:** Monitors new process execution without root by scanning /proc. Detects cron jobs, scripts, and hidden processes that only run briefly.
+
+**Download:** https://github.com/DominicBreuker/pspy/releases
+
+```bash
+./pspy64             # Monitor all new processes
+./pspy64 -i 100      # Scan interval 100ms for faster detection
+```
+
+## Network Monitoring
+
+### ss (Socket Statistics)
+
+**What:** Modern replacement for `netstat`. Shows TCP, UDP, UNIX sockets with process info. Faster and more feature-rich.
+
+```bash
+# All listening TCP ports with process names
+ss -tlnp
+
+# All established connections
+ss -tnp
+
+# All listening + established
+ss -tunap
+
+# Connections to a specific port
+ss -tnp dst :443
+
+# Connections from a specific IP
+ss -tnp src 10.0.0.50
+
+# Summary statistics
+ss -s
+```
+
+### tcpdump
+
+**What:** Command-line packet capture. Captures and displays network traffic in real time or saves to pcap files.
+
+```bash
+# Install
+sudo apt install tcpdump      # Debian/Ubuntu
+sudo yum install tcpdump      # RHEL/CentOS
+
+# Capture all traffic on eth0
+sudo tcpdump -i eth0
+
+# Capture specific port, write to file
+sudo tcpdump -i eth0 port 22 -w /tmp/ssh-traffic.pcap
+
+# Capture traffic from specific host
+sudo tcpdump -i eth0 host 10.0.0.100
+
+# Capture and display packet contents
+sudo tcpdump -i eth0 -A -s 0 port 80
+
+# Capture DNS queries
+sudo tcpdump -i eth0 port 53
+
+# Read a pcap file
+tcpdump -r /tmp/capture.pcap
+
+# Common filters
+sudo tcpdump -i eth0 'tcp[tcpflags] & (tcp-syn) != 0'   # SYN packets
+sudo tcpdump -i eth0 'port 80 and host 10.0.0.1'        # Combined
+```
+
+### iftop / nethogs / nload
+
+**What:** Real-time bandwidth monitoring tools. `iftop` shows connections by bandwidth, `nethogs` shows bandwidth per process, `nload` shows per-interface throughput.
+
+```bash
+# Install
+sudo apt install iftop nethogs nload
+
+# Bandwidth by connection (like TCPView for bandwidth)
+sudo iftop -i eth0
+
+# Bandwidth by process (which process is using network)
+sudo nethogs eth0
+
+# Per-interface throughput graph
+nload eth0
+```
+
+### conntrack
+
+**What:** View and manage the kernel's connection tracking table (netfilter/iptables state table).
+
+```bash
+# Install
+sudo apt install conntrack     # Debian/Ubuntu
+
+# List all tracked connections
+sudo conntrack -L
+
+# Count connections
+sudo conntrack -C
+
+# Watch new connections in real time
+sudo conntrack -E
+
+# Filter by source
+sudo conntrack -L -s 10.0.0.100
+```
+
+## Autostart and Persistence Auditing
+
+Linux has no single tool like Autoruns. You must check multiple locations:
+
+```bash
+# ---- Systemd Services ----
+systemctl list-unit-files --type=service --state=enabled
+systemctl list-timers --all
+
+# ---- Cron Jobs (all users) ----
+for user in $(cut -f1 -d: /etc/passwd); do
+    echo "=== $user ==="; crontab -l -u "$user" 2>/dev/null
+done
+cat /etc/crontab
+ls -la /etc/cron.d/ /etc/cron.daily/ /etc/cron.hourly/ /etc/cron.weekly/ /etc/cron.monthly/
+
+# ---- Init Scripts ----
+ls -la /etc/init.d/
+cat /etc/rc.local 2>/dev/null
+
+# ---- Shell Profiles (backdoor commands) ----
+grep -r "." /etc/profile.d/
+for user_home in /home/* /root; do
+    echo "=== $user_home ==="
+    grep -n "." "$user_home/.bashrc" "$user_home/.bash_profile" \
+        "$user_home/.profile" 2>/dev/null | grep -v "^#"
+done
+
+# ---- SSH Authorized Keys ----
+find / -name authorized_keys 2>/dev/null -exec echo "=== {} ===" \; -exec cat {} \;
+
+# ---- At Jobs ----
+atq
+ls -la /var/spool/at/
+
+# ---- User Systemd Services ----
+find /home -path "*/.config/systemd/user/*.service" 2>/dev/null
+
+# ---- Kernel Modules ----
+lsmod
+cat /etc/modules 2>/dev/null
+ls /etc/modules-load.d/
+```
+
+## Security Auditing
+
+### lynis
+
+**What:** Comprehensive system auditing tool. Scans the system and produces a hardening report with a score and specific recommendations.
+
+```bash
+# Install
+sudo apt install lynis        # Debian/Ubuntu
+sudo yum install lynis        # RHEL/CentOS (EPEL)
+
+# Run full audit
+sudo lynis audit system
+
+# Run specific test group
+sudo lynis audit system --tests-from-group "firewalls"
+
+# Key output files
+/var/log/lynis.log            # Full log
+/var/log/lynis-report.dat     # Machine-readable report
+```
+
+### chkrootkit / rkhunter
+
+**What:** Rootkit detection scanners. Check for known rootkit signatures, suspicious files, and system binary modifications.
+
+```bash
+# Install
+sudo apt install chkrootkit rkhunter
+
+# Run chkrootkit
+sudo chkrootkit
+
+# Run rkhunter
+sudo rkhunter --update        # Update signatures
+sudo rkhunter --check         # Full scan
+sudo rkhunter --check --sk    # Skip keypress prompts
+```
+
+### AIDE (Advanced Intrusion Detection Environment)
+
+**What:** File integrity monitoring. Creates a database of file hashes and permissions, then detects changes.
+
+```bash
+# Install
+sudo apt install aide
+
+# Initialize database (do this on a clean system)
+sudo aideinit
+
+# Check for changes
+sudo aide --check
+
+# Update database after legitimate changes
+sudo aide --update
+```
+
+### auditd / ausearch / aureport
+
+**What:** Linux kernel audit framework. Logs syscalls, file access, user commands, and security events.
+
+```bash
+# Install
+sudo apt install auditd
+
+# Add audit rules
+sudo auditctl -w /etc/passwd -p wa -k passwd_changes
+sudo auditctl -w /etc/shadow -p wa -k shadow_changes
+sudo auditctl -a always,exit -F arch=b64 -S execve -F euid=0 -k root_commands
+
+# Search audit logs
+sudo ausearch -k passwd_changes          # By key
+sudo ausearch -ui 0 -sc execve           # Root command execution
+sudo ausearch -ts recent                  # Last 10 minutes
+
+# Generate reports
+sudo aureport --summary
+sudo aureport --auth                     # Authentication events
+sudo aureport --login                    # Login events
+sudo aureport --file                     # File access events
+```
+
+### ClamAV
+
+**What:** Open-source antivirus. Scans files for known malware signatures.
+
+```bash
+# Install
+sudo apt install clamav clamav-daemon
+
+# Update signatures
+sudo freshclam
+
+# Scan a directory
+clamscan -r /home/
+clamscan -r --infected --remove /tmp/    # Remove infected files
+
+# Scan and log
+clamscan -r /var/www/ -l /var/log/clamscan.log
+```
+
+## File and Disk Analysis
+
+### find (Security-Relevant Searches)
+
+```bash
+# Find all SUID binaries (privilege escalation vectors)
+find / -perm -4000 -type f 2>/dev/null
+
+# Find all SGID binaries
+find / -perm -2000 -type f 2>/dev/null
+
+# Find world-writable files
+find / -perm -0002 -type f 2>/dev/null
+
+# Find world-writable directories
+find / -perm -0002 -type d 2>/dev/null
+
+# Find files modified in the last 24 hours
+find / -mtime -1 -type f 2>/dev/null
+
+# Find files modified in the last hour
+find / -mmin -60 -type f 2>/dev/null
+
+# Find files owned by no user (orphaned)
+find / -nouser 2>/dev/null
+
+# Find files with capabilities set
+getcap -r / 2>/dev/null
+
+# Find hidden files in web directories
+find /var/www -name ".*" -type f 2>/dev/null
+
+# Find PHP files in upload directories
+find /var/www -name "*.php" -newer /var/www/index.html 2>/dev/null
+```
+
+### debsums / rpm -Va (Package Integrity)
+
+**What:** Verify installed package files against their expected checksums. Detects modified system binaries.
+
+```bash
+# Debian/Ubuntu
+sudo apt install debsums
+sudo debsums -c              # Show only changed files
+sudo debsums -s              # Silent (errors only)
+
+# RHEL/CentOS
+sudo rpm -Va                 # Verify all packages
+sudo rpm -Vf /usr/bin/ssh    # Verify specific file's package
+```
+
+**rpm -Va output codes:** `S` = size, `M` = permissions, `5` = MD5, `T` = mtime, `U` = owner, `G` = group.
+
+### inotifywait (Real-Time File Monitoring)
+
+**What:** Watch files/directories for changes in real time. Part of `inotify-tools`.
+
+```bash
+# Install
+sudo apt install inotify-tools
+
+# Watch a directory for any changes
+inotifywait -m -r /etc/
+
+# Watch specific events
+inotifywait -m -r -e modify,create,delete /var/www/html/
+
+# Watch and log with timestamps
+inotifywait -m -r -e modify,create,delete --timefmt '%F %T' \
+    --format '%T %w%f %e' /etc/ >> /var/log/etc-changes.log &
+```
+
+### strings / file / hexdump
+
+**What:** Examine file contents and types without executing them.
+
+```bash
+# Identify file type
+file suspicious_binary
+
+# Extract printable strings (find URLs, IPs, paths)
+strings suspicious_binary | grep -E "(http|https|ftp|/bin/|/tmp/)"
+
+# Hex dump
+hexdump -C suspicious_binary | head -50
+xxd suspicious_binary | head -50
+```
+
+## System Information
+
+```bash
+# ---- OS and Kernel ----
+uname -a                     # Kernel version
+cat /etc/os-release          # Distribution info
+hostnamectl                  # Hostname, OS, kernel, architecture
+
+# ---- Hardware ----
+lscpu                        # CPU info
+free -h                      # Memory usage
+df -h                        # Disk usage
+lsblk                        # Block devices
+ip addr                      # Network interfaces
+
+# ---- Users and Sessions ----
+w                            # Who is logged in and what they're doing
+who                          # Logged in users
+last                         # Login history
+lastb                        # Failed login history
+id                           # Current user info
+
+# ---- Network ----
+ip route                     # Routing table
+ip neigh                     # ARP table
+cat /etc/resolv.conf         # DNS configuration
+iptables -L -n -v            # Firewall rules
+
+# ---- Services ----
+systemctl list-units --type=service --state=running
+systemctl list-units --type=service --state=failed
+```
+
+## Remote Administration
+
+### SSH Tips for Competition
+
+```bash
+# Generate key pair (do this on your admin machine)
+ssh-keygen -t ed25519 -f ~/.ssh/ccdc_key
+
+# Copy key to target (faster than typing passwords each time)
+ssh-copy-id -i ~/.ssh/ccdc_key user@target
+
+# Run command on remote host
+ssh user@target "systemctl status sshd"
+
+# Copy files
+scp local_file user@target:/remote/path
+scp -r user@target:/remote/dir ./local_dir
+
+# SSH tunnel (access remote web UI through SSH)
+ssh -L 8080:localhost:80 user@target
+# Then open http://localhost:8080 in your browser
+```
+
+### tmux (Terminal Multiplexer)
+
+**What:** Persistent terminal sessions that survive SSH disconnects. Essential for competition -- if your SSH drops, your work continues.
+
+```bash
+# Install
+sudo apt install tmux
+
+# Start named session
+tmux new -s hardening
+
+# Detach (without killing session)
+Ctrl+B, then D
+
+# Reattach
+tmux attach -t hardening
+
+# List sessions
+tmux ls
+
+# Split panes
+Ctrl+B, then %          # Vertical split
+Ctrl+B, then "          # Horizontal split
+Ctrl+B, then arrow      # Navigate panes
+```
+
+### parallel-ssh (pssh)
+
+**What:** Run SSH commands on multiple hosts simultaneously.
+
+```bash
+# Install
+sudo apt install pssh
+
+# Create hosts file
+echo "user@10.0.0.10" > hosts.txt
+echo "user@10.0.0.11" >> hosts.txt
+echo "user@10.0.0.12" >> hosts.txt
+
+# Run command on all hosts
+parallel-ssh -i -h hosts.txt "uname -a"
+
+# Copy file to all hosts
+parallel-scp -h hosts.txt local_file /remote/path
+```
+
+## Log Analysis
+
+### journalctl
+
+**What:** Query the systemd journal. The primary log viewer on modern Linux systems.
+
+```bash
+# Follow all logs in real time
+journalctl -f
+
+# Show logs since boot
+journalctl -b
+
+# Filter by unit
+journalctl -u sshd
+
+# Filter by time range
+journalctl --since "2026-03-16 08:00" --until "2026-03-16 12:00"
+
+# Filter by priority (0=emerg through 7=debug)
+journalctl -p err            # Errors and above
+
+# Show authentication logs
+journalctl _COMM=sudo
+journalctl _COMM=sshd
+
+# Output as JSON (for parsing)
+journalctl -u sshd -o json-pretty
+
+# Disk usage
+journalctl --disk-usage
+```
+
+### Quick Log Searches
+
+```bash
+# Failed SSH logins
+grep "Failed password" /var/log/auth.log | tail -20
+journalctl _COMM=sshd | grep "Failed"
+
+# Successful SSH logins
+grep "Accepted" /var/log/auth.log | tail -20
+
+# Sudo usage
+grep "COMMAND" /var/log/auth.log | tail -20
+
+# User creation
+grep "useradd" /var/log/auth.log
+
+# Cron execution
+grep "CRON" /var/log/syslog | tail -20
+
+# Count failed logins by IP
+grep "Failed password" /var/log/auth.log | \
+    grep -oP 'from \K[\d.]+' | sort | uniq -c | sort -rn | head
+```
+
+### fail2ban
+
+**What:** Monitors log files and automatically bans IPs that show malicious signs (brute force, scanning).
+
+```bash
+# Install
+sudo apt install fail2ban
+
+# Start and enable
+sudo systemctl enable --now fail2ban
+
+# Check status
+sudo fail2ban-client status
+sudo fail2ban-client status sshd
+
+# Manually ban/unban
+sudo fail2ban-client set sshd banip 10.0.0.100
+sudo fail2ban-client set sshd unbanip 10.0.0.100
+
+# List all bans
+sudo fail2ban-client banned
+```
+
+## DNS and Network Utilities
+
+```bash
+# DNS lookup
+dig example.com              # Full DNS query
+dig @8.8.8.8 example.com    # Query specific server
+dig -x 10.0.0.1             # Reverse lookup
+host example.com             # Simple lookup
+nslookup example.com         # Interactive DNS
+
+# HTTP requests
+curl -I https://example.com          # Headers only
+curl -v https://example.com          # Verbose (see TLS handshake)
+wget --spider https://example.com    # Check if URL exists
+
+# Certificate inspection
+openssl s_client -connect example.com:443 < /dev/null
+openssl x509 -in cert.pem -text -noout
+
+# Network scanning (if nmap is available)
+nmap -sV -sC -p- target             # Full port scan with versions
+nmap -sn 10.0.0.0/24                # Ping sweep (host discovery)
+```
+
+## Advanced Tools
+
+### osquery
+
+**What:** SQL-powered operating system instrumentation. Query processes, users, network, packages, autoruns, and more using familiar SQL syntax.
+
+**Install:** https://osquery.io/downloads
+
+```bash
+# Interactive SQL shell
+osqueryi
+
+# Example queries
+SELECT * FROM processes WHERE name='sshd';
+SELECT * FROM listening_ports;
+SELECT * FROM crontab;
+SELECT * FROM logged_in_users;
+SELECT * FROM suid_bin;
+SELECT * FROM shell_history;
+SELECT name, path FROM startup_items;
+```
+
+### YARA
+
+**What:** Pattern matching tool for malware identification. Write rules to match binary or text patterns in files.
+
+```bash
+# Install
+sudo apt install yara
+
+# Scan files against rules
+yara rules.yar /path/to/scan
+yara -r rules.yar /directory       # Recursive
+```
+
+### Suricata (Network IDS/IPS)
+
+**What:** Network intrusion detection system. Monitors traffic for known attack signatures in real time.
+
+```bash
+# Install
+sudo apt install suricata
+
+# Run on interface
+sudo suricata -c /etc/suricata/suricata.yaml -i eth0
+
+# Update rules
+sudo suricata-update
+```
+
+### Firejail (Application Sandboxing)
+
+**What:** SUID sandbox that isolates applications using Linux namespaces and seccomp-bpf. Run untrusted binaries safely.
+
+```bash
+# Install
+sudo apt install firejail
+
+# Run a program with no network access
+firejail --net=none ./suspicious_binary
+
+# Run with filesystem restrictions
+firejail --private ./suspicious_binary
+```
+
+\newpage
+
+---
+
+# Cross-Reference: Windows vs. Linux Equivalents
+
+| Task | Windows (Sysinternals) | Linux |
+|---|---|---|
+| Process viewer | Process Explorer | `htop`, `ps auxf` |
+| Process tracing | Process Monitor | `strace -fp PID` |
+| Network connections | TCPView | `ss -tunap`, `lsof -i` |
+| Autostart audit | Autoruns | `systemctl`, cron, `/etc/init.d` |
+| Open files/handles | `handle64.exe` | `lsof` |
+| Remote execution | PsExec | `ssh`, `pssh` |
+| Service control | PsService | `systemctl` |
+| Process kill | PsKill | `kill`, `pkill` |
+| Logged-on users | PsLoggedOn | `w`, `who`, `last` |
+| System info | PsInfo | `uname -a`, `hostnamectl` |
+| Disk usage | Du | `du -sh`, `ncdu` |
+| File signatures | Sigcheck | `debsums`, `rpm -Va` |
+| Event logging | Sysmon | `auditd` |
+| Rootkit detection | (third-party) | `chkrootkit`, `rkhunter` |
+| System audit | (third-party) | `lynis` |
+| File integrity | (third-party) | `aide`, `tripwire` |
+| Bandwidth by process | (third-party) | `nethogs` |
+| Firewall | Windows Firewall / Portmaster | `iptables`, `ufw`, `firewalld` |
+| Packet capture | Wireshark / netmon | `tcpdump`, `tshark` |
+| File monitoring | (Process Monitor) | `inotifywait` |
+| Antivirus scan | Windows Defender | `clamav` |
+
+---
+
+# Quick Install Cheatsheet
+
+## Debian / Ubuntu -- Install All Tools
+
+```bash
+sudo apt update && sudo apt install -y \
+    htop atop strace lsof tmux \
+    tcpdump iftop nethogs nload conntrack \
+    lynis chkrootkit rkhunter aide \
+    auditd audispd-plugins \
+    clamav clamav-daemon \
+    inotify-tools debsums \
+    fail2ban pssh nmap \
+    net-tools curl wget openssl
+```
+
+## RHEL / CentOS -- Install All Tools
+
+```bash
+sudo yum install -y epel-release && sudo yum install -y \
+    htop atop strace lsof tmux \
+    tcpdump iftop nethogs nload conntrack-tools \
+    lynis rkhunter aide \
+    audit \
+    clamav clamav-update clamd \
+    inotify-tools \
+    fail2ban pssh nmap \
+    net-tools curl wget openssl
+```
+
+## Windows -- Deploy Sysinternals
+
+```powershell
+# Download and extract suite
+Invoke-WebRequest -Uri "https://download.sysinternals.com/files/SysinternalsSuite.zip" `
+    -OutFile "$env:TEMP\SysinternalsSuite.zip"
+Expand-Archive "$env:TEMP\SysinternalsSuite.zip" -DestinationPath "C:\Tools\Sysinternals"
+
+# Or access directly from the web (requires internet)
+\\live.sysinternals.com\tools\procexp64.exe
+```

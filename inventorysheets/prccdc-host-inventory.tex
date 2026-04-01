@@ -1,0 +1,433 @@
+% PRCCDC Host Inventory Sheet (single-host packet)
+% - Designed for one blue team member working one VM/host
+% - Print-friendly, table-driven, minimal clutter
+%
+% Fill-in workflow:
+% - Print and fill with pen/pencil.
+%
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[left=0.6cm,right=0.6cm,top=0.6cm,bottom=0.6cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{calc}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=black,
+  pdfauthor={PRCCDC Blue Team},
+  pdftitle={PRCCDC Host Inventory Sheet}
+}
+
+% -------------------- Visual style --------------------
+\definecolor{InvBlue}{HTML}{1A5276}
+\definecolor{InvBlueSoft}{HTML}{EAF2F8}
+\definecolor{InvLine}{HTML}{D5DBDB}
+
+\newcommand{\cb}{\fbox{\phantom{X}}}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+\newcommand{\InvHeader}{\bfseries\sffamily\color{InvBlue}}
+\newcommand{\InvHeaderRow}{\rowcolor{InvBlueSoft}\InvHeader}
+
+\pagestyle{empty}
+
+% -------------------- Table macro --------------------
+% Stretching table that fills a given height.
+% #1=title, #2=ncols, #3=colspec, #4=height, #5=rows
+\newcommand{\InvTable}[5]{%
+  \noindent\vbox to #4{%
+    \begingroup%
+    \setlength{\tabcolsep}{5pt}%
+    \arrayrulecolor{InvLine}%
+    \setlength{\arrayrulewidth}{0.5pt}%
+    \def\R##1{##1\\\hline}%
+    \begin{tabularx}{\linewidth}{|#3|}
+      \hline%
+      \rowcolor{InvBlueSoft}\multicolumn{#2}{|l|}{\InvHeader #1} \\%
+      \hline%
+      #5%
+    \end{tabularx}%
+    \endgroup%
+    \vfil%
+  }%
+}
+
+% Page-filling heights
+\newlength{\FullH}
+\setlength{\FullH}{\textheight}
+\newlength{\HalfH}
+\setlength{\HalfH}{0.49\textheight}
+\newlength{\ThirdH}
+\setlength{\ThirdH}{0.325\textheight}
+\newlength{\TwoThirdH}
+\setlength{\TwoThirdH}{0.655\textheight}
+\newlength{\InvSep}
+\setlength{\InvSep}{6pt}
+
+% -------------------- Document --------------------
+\begin{document}
+\renewcommand{\arraystretch}{1.65}
+
+% ===================== PAGE 1 -- Identity & Credentials =====================
+\InvTable{Host Overview --- Core Identity}{2}{L{0.30\linewidth}|Y}{\HalfH}{%
+  \InvHeaderRow Field & \InvHeader Value \\\hline
+  \R{Asset / VM label &}
+  \R{Hostname / FQDN &}
+  \R{OS / Version &}
+  \R{Primary IP &}
+  \R{Analyst / Owner &}
+  \R{Date &}
+  \R{Role / Purpose &}
+  \R{Scored services (on this host) &}
+  \R{Domain joined? (domain name) &}
+  \R{Init system (systemd / SysVinit) &}
+  \R{Package mgr (apt/yum/dnf/zypper) &}
+  \R{Notes &}
+}
+\vspace{\InvSep}
+\InvTable{Host Overview --- Access \& Credentials}{4}{L{0.14\linewidth}|Y|L{0.16\linewidth}|Y}{\HalfH}{%
+  \InvHeaderRow Method & \InvHeader Endpoint / Details & \InvHeader Account & \InvHeader Password / Key \\\hline
+  \R{SSH &  &  & }
+  \R{RDP &  &  & }
+  \R{Console &  &  & }
+  \R{Web admin &  &  & }
+  \R{DB login &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+}
+\newpage
+
+% ===================== PAGE 2 -- Security Posture & Firewall =====================
+\InvTable{Security Posture --- Initial Hardening Checklist}{3}{L{0.46\linewidth}|C{0.08\linewidth}|Y}{\HalfH}{%
+  \InvHeaderRow Control & \InvHeader Done & \InvHeader Notes \\\hline
+  \R{Default/weak passwords changed & \cb &}
+  \R{Unnecessary accounts disabled/removed & \cb &}
+  \R{Guest/anonymous access disabled & \cb &}
+  \R{Host firewall enabled and configured & \cb &}
+  \R{Remote admin restricted (SSH/RDP/WinRM) & \cb &}
+  \R{Local admin/sudo/wheel group reviewed & \cb &}
+  \R{Logging enabled and verified & \cb &}
+  \R{Time sync verified (NTP/w32tm) & \cb &}
+  \R{Config backups taken & \cb &}
+  \R{Database backups taken & \cb &}
+  \R{Scored services tested and passing & \cb &}
+  \R{Other & \cb &}
+}
+\vspace{\InvSep}
+\InvTable{Security Posture --- Firewall Rules}{4}{L{0.10\linewidth}|L{0.14\linewidth}|L{0.16\linewidth}|Y}{\HalfH}{%
+  \InvHeaderRow Dir & \InvHeader Proto/Port & \InvHeader Source/Dest & \InvHeader Purpose / Notes \\\hline
+  \R{IN & TCP/22 &  & SSH (scored?)}
+  \R{IN & TCP/3389 &  & RDP (scored?)}
+  \R{IN &  &  & }
+  \R{IN &  &  & }
+  \R{IN &  &  & }
+  \R{IN &  &  & }
+  \R{IN &  &  & }
+  \R{IN &  &  & }
+  \R{OUT &  &  & }
+  \R{OUT &  &  & }
+  \R{OUT &  &  & }
+  \R{Default &  &  & DROP / ALLOW}
+}
+\newpage
+
+% ===================== PAGE 3 -- Network =====================
+\InvTable{Network --- Interfaces \& Addressing}{5}{L{0.12\linewidth}|L{0.20\linewidth}|L{0.16\linewidth}|L{0.16\linewidth}|Y}{\TwoThirdH}{%
+  \InvHeaderRow Iface & \InvHeader IPv4/IPv6 & \InvHeader Netmask/Prefix & \InvHeader GW/VLAN & \InvHeader Notes \\\hline
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+  \R{ &  &  &  & }
+}
+\vspace{\InvSep}
+\InvTable{Network --- DNS / Routing / Dependencies}{2}{L{0.36\linewidth}|Y}{\ThirdH}{%
+  \InvHeaderRow Item & \InvHeader Value / Notes \\\hline
+  \R{DNS servers &}
+  \R{Search domains &}
+  \R{Default gateway &}
+  \R{Static routes &}
+  \R{Hosts file overrides &}
+  \R{Proxy settings &}
+  \R{Upstream dependencies (DB, DNS, AD) &}
+  \R{Downstream dependents (who needs me?) &}
+}
+\newpage
+
+% ===================== PAGE 4 -- Listening Services =====================
+\InvTable{Network --- Listening Services (Attack Surface)}{5}{L{0.07\linewidth}|L{0.07\linewidth}|L{0.18\linewidth}|Y|L{0.07\linewidth}}{\FullH}{%
+  \InvHeaderRow Proto & \InvHeader Port & \InvHeader Service & \InvHeader Process / Bind Address / Config Path & \InvHeader Scored? \\\hline
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+  \R{ &  &  &  & \cb}
+}
+\newpage
+
+% ===================== PAGE 5 -- Accounts =====================
+\InvTable{Accounts --- Local Users}{5}{L{0.20\linewidth}|L{0.10\linewidth}|C{0.08\linewidth}|L{0.14\linewidth}|Y}{\HalfH}{%
+  \InvHeaderRow Username & \InvHeader UID/SID & \InvHeader Priv? & \InvHeader Shell/Login & \InvHeader Notes (last logon, purpose) \\\hline
+  \R{ &  & \cb &  & }
+  \R{ &  & \cb &  & }
+  \R{ &  & \cb &  & }
+  \R{ &  & \cb &  & }
+  \R{ &  & \cb &  & }
+  \R{ &  & \cb &  & }
+  \R{ &  & \cb &  & }
+  \R{ &  & \cb &  & }
+  \R{ &  & \cb &  & }
+  \R{ &  & \cb &  & }
+  \R{ &  & \cb &  & }
+  \R{ &  & \cb &  & }
+}
+\vspace{\InvSep}
+\InvTable{Accounts --- Privileged Groups / Roles}{3}{L{0.30\linewidth}|L{0.30\linewidth}|Y}{\HalfH}{%
+  \InvHeaderRow Group / Role & \InvHeader Members & \InvHeader Notes \\\hline
+  \R{root / Administrators &  & }
+  \R{sudo / wheel &  & }
+  \R{Domain Admins &  & }
+  \R{Remote Desktop Users &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+}
+\newpage
+
+% ===================== PAGE 6 -- Remote Access & Service Inventory =====================
+\InvTable{Accounts --- Remote Access Audit}{3}{L{0.44\linewidth}|C{0.08\linewidth}|Y}{\ThirdH}{%
+  \InvHeaderRow Item & \InvHeader OK? & \InvHeader Notes / Evidence \\\hline
+  \R{SSH: PasswordAuthentication set correctly & \cb &}
+  \R{SSH: PermitRootLogin disabled & \cb &}
+  \R{SSH: AllowUsers / AllowGroups restricted & \cb &}
+  \R{RDP: NLA enforced (if applicable) & \cb &}
+  \R{RDP: restricted to needed users & \cb &}
+  \R{WinRM: disabled or restricted & \cb &}
+  \R{Account lockout policy set & \cb &}
+  \R{Authorized\_keys reviewed (no unknowns) & \cb &}
+  \R{Other & \cb &}
+}
+\vspace{\InvSep}
+\InvTable{Services --- Inventory (Running / Installed)}{4}{L{0.20\linewidth}|L{0.10\linewidth}|L{0.14\linewidth}|Y}{\TwoThirdH}{%
+  \InvHeaderRow Service / App & \InvHeader Port(s) & \InvHeader Runs as & \InvHeader Config / Log path / Notes \\\hline
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+}
+\newpage
+
+% ===================== PAGE 7 -- Scheduled Tasks & Persistence =====================
+\InvTable{Services --- Scheduled Tasks / Cron / Startup}{3}{L{0.28\linewidth}|L{0.22\linewidth}|Y}{\ThirdH}{%
+  \InvHeaderRow Name & \InvHeader Trigger & \InvHeader Command / Path / Notes \\\hline
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+}
+\vspace{\InvSep}
+\InvTable{Persistence --- Backdoor Hunt Checklist}{3}{L{0.48\linewidth}|C{0.07\linewidth}|Y}{\TwoThirdH}{%
+  \InvHeaderRow Check (mark suspicious items in Findings) & \InvHeader Clear & \InvHeader Findings \\\hline
+  \R{Cron jobs: /var/spool/cron/, /etc/cron.* & \cb &}
+  \R{Systemd timers / unit files in /etc/systemd/ & \cb &}
+  \R{rc.local / init scripts & \cb &}
+  \R{.bashrc / .profile / shell RC modifications & \cb &}
+  \R{Authorized\_keys files (all users) & \cb &}
+  \R{SUID/SGID binaries (unexpected ones) & \cb &}
+  \R{LD\_PRELOAD / ld.so.preload & \cb &}
+  \R{Kernel modules (lsmod, /etc/modules) & \cb &}
+  \R{/tmp and /dev/shm suspicious files & \cb &}
+  \R{Webshells in web roots & \cb &}
+  \R{Scheduled Tasks (schtasks /query) [Win] & \cb &}
+  \R{Registry Run keys (HKLM + HKCU) [Win] & \cb &}
+  \R{Services: unknown/suspicious entries [Win] & \cb &}
+  \R{Startup folder items [Win] & \cb &}
+  \R{WMI event subscriptions [Win] & \cb &}
+  \R{DLL search order / hijacking [Win] & \cb &}
+  \R{Netsh helper DLLs [Win] & \cb &}
+  \R{Unusual listening ports / reverse shells & \cb &}
+}
+\newpage
+
+% ===================== PAGE 8 -- Patch Level & Security Controls =====================
+\InvTable{Patch / Controls --- Updates \& Patch Level}{2}{L{0.38\linewidth}|Y}{\HalfH}{%
+  \InvHeaderRow Item & \InvHeader Value / Notes \\\hline
+  \R{Kernel / OS build version &}
+  \R{Last update date &}
+  \R{Update mechanism (apt/yum/WSUS) &}
+  \R{Pending reboot? &}
+  \R{Repo configured? Reachable? &}
+  \R{High-risk unpatched components &}
+  \R{Notes &}
+  \R{ &}
+  \R{ &}
+  \R{ &}
+  \R{ &}
+  \R{ &}
+}
+\vspace{\InvSep}
+\InvTable{Patch / Controls --- Security Controls \& Telemetry}{3}{L{0.40\linewidth}|C{0.08\linewidth}|Y}{\HalfH}{%
+  \InvHeaderRow Control & \InvHeader On? & \InvHeader Notes (product, version, config) \\\hline
+  \R{AV / EDR & \cb &}
+  \R{Host logging (auditd / Sysmon / Event Log) & \cb &}
+  \R{Central log forwarding (syslog / WEF) & \cb &}
+  \R{MAC (SELinux / AppArmor) mode & \cb &}
+  \R{Windows Defender / AMSI & \cb &}
+  \R{PowerShell script block logging & \cb &}
+  \R{Important log paths identified & \cb &}
+  \R{Other & \cb &}
+  \R{ & \cb & }
+  \R{ & \cb & }
+  \R{ & \cb & }
+  \R{ & \cb & }
+}
+\newpage
+
+% ===================== PAGE 9 -- Data & Databases =====================
+\InvTable{Data --- Sensitive Data / Shares / Storage}{4}{L{0.22\linewidth}|Y|C{0.10\linewidth}|Y}{\HalfH}{%
+  \InvHeaderRow Category & \InvHeader Location(s) & \InvHeader Backup? & \InvHeader Notes \\\hline
+  \R{PII / customer data &  & \cb & }
+  \R{Web root / site content &  & \cb & }
+  \R{Config files (critical) &  & \cb & }
+  \R{SSL/TLS certificates &  & \cb & }
+  \R{SMB/NFS shares &  & \cb & }
+  \R{Credentials / keytabs &  & \cb & }
+  \R{ &  & \cb & }
+  \R{ &  & \cb & }
+  \R{ &  & \cb & }
+  \R{ &  & \cb & }
+  \R{ &  & \cb & }
+  \R{ &  & \cb & }
+}
+\vspace{\InvSep}
+\InvTable{Data --- Database Inventory}{5}{L{0.14\linewidth}|L{0.14\linewidth}|L{0.28\linewidth}|C{0.08\linewidth}|Y}{\HalfH}{%
+  \InvHeaderRow Engine & \InvHeader DB / Instance & \InvHeader Data / Log / Config Paths & \InvHeader Bkup? & \InvHeader Notes \\\hline
+  \R{ &  &  & \cb & }
+  \R{ &  &  & \cb & }
+  \R{ &  &  & \cb & }
+  \R{ &  &  & \cb & }
+  \R{ &  &  & \cb & }
+  \R{ &  &  & \cb & }
+  \R{ &  &  & \cb & }
+  \R{ &  &  & \cb & }
+  \R{ &  &  & \cb & }
+  \R{ &  &  & \cb & }
+  \R{ &  &  & \cb & }
+  \R{ &  &  & \cb & }
+}
+\newpage
+
+% ===================== PAGE 10 -- Findings & Timeline =====================
+\InvTable{Findings --- Top Findings / Risks}{4}{C{0.05\linewidth}|L{0.22\linewidth}|Y|L{0.16\linewidth}}{\HalfH}{%
+  \InvHeaderRow Sev & \InvHeader Finding & \InvHeader Evidence / Impact & \InvHeader Fix / Owner \\\hline
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+  \R{ &  &  & }
+}
+\vspace{\InvSep}
+\InvTable{Findings --- Actions Taken (Timeline)}{3}{L{0.12\linewidth}|L{0.22\linewidth}|Y}{\HalfH}{%
+  \InvHeaderRow Time & \InvHeader What & \InvHeader Notes / Command / Ticket \\\hline
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+  \R{ &  & }
+}
+
+\end{document}

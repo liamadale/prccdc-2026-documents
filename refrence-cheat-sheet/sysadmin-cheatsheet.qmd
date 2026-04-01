@@ -1,0 +1,510 @@
+---
+title: ""
+format:
+  pdf:
+    toc: false
+    pdf-engine: pdflatex
+    geometry:
+      - margin=0.35in
+      - landscape
+    fontsize: 7pt
+    documentclass: article
+    include-in-header:
+      text: |
+        \usepackage{fvextra}
+        \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+        \usepackage{xurl}
+        \usepackage{enumitem}
+        \setlist{nosep,leftmargin=*}
+        \usepackage{longtable}
+        \usepackage{booktabs}
+        \usepackage{multicol}
+        \usepackage{titlesec}
+        \usepackage{colortbl}
+        \usepackage{xcolor}
+        \usepackage{array}
+        \usepackage{tabularx}
+        \definecolor{hdrblack}{HTML}{2D2D2D}
+        \definecolor{hdrtext}{HTML}{FFFFFF}
+        \definecolor{accentblue}{HTML}{1A5276}
+        \titleformat{\section}{\normalfont\normalsize\bfseries\color{accentblue}}{}{0em}{}[\vspace{-0.5em}\rule{\columnwidth}{0.4pt}]
+        \titleformat{\subsection}{\normalfont\small\bfseries}{}{0em}{}
+        \titlespacing*{\section}{0pt}{4pt}{1pt}
+        \titlespacing*{\subsection}{0pt}{3pt}{0pt}
+        \pagestyle{empty}
+        \setlength{\parindent}{0pt}
+        \setlength{\parskip}{0.5pt}
+        \setlength{\columnsep}{10pt}
+        \newcommand{\cheatheader}[1]{\noindent\colorbox{hdrblack}{\parbox{\dimexpr\columnwidth-2\fboxsep}{\strut\textcolor{hdrtext}{\textbf{#1}}\strut}}\vspace{1pt}}
+        \renewcommand{\arraystretch}{1.1}
+        \newcolumntype{C}{>{\ttfamily\raggedright\arraybackslash\footnotesize}p{0.52\columnwidth}}
+        \newcolumntype{D}{>{\raggedright\arraybackslash\footnotesize}p{0.44\columnwidth}}
+---
+
+\begin{multicols}{2}
+
+\noindent{\Large\bfseries\color{accentblue} System Administration Reference Cheatsheet}\\[1pt]
+{\footnotesize Modern Linux (systemd) \textbar\ Legacy Linux (SysVinit) \textbar\ Windows --- Service, Package, File, and Backup Management}
+
+\vspace{4pt}
+
+\cheatheader{SERVICE MANAGEMENT}
+
+\subsection*{Modern Linux (systemd)}
+
+\begin{tabular}{@{}CD@{}}
+systemctl start NAME & Start a service \\
+systemctl stop NAME & Stop a service \\
+systemctl restart NAME & Restart a service \\
+systemctl reload NAME & Reload config (no restart) \\
+systemctl enable NAME & Start at boot \\
+systemctl disable NAME & Do not start at boot \\
+systemctl status NAME & Status and recent logs \\
+systemctl is-active NAME & Check if running \\
+systemctl is-enabled NAME & Check if boot-enabled \\
+systemctl list-units {-}{-}type=service & All loaded services \\
+systemctl list-unit-files & All installed services \\
+systemctl daemon-reload & Reload after unit file edits \\
+systemctl mask NAME & Prevent starting entirely \\
+journalctl -u NAME -f & Follow logs for service \\
+\end{tabular}
+
+\subsection*{Legacy Linux (SysVinit)}
+
+\begin{tabular}{@{}CD@{}}
+service NAME start|stop|restart & Control a service \\
+service NAME status & Show status \\
+chkconfig NAME on & Enable at boot (RHEL 5--6) \\
+chkconfig NAME off & Disable at boot \\
+chkconfig {-}{-}list & List all services/runlevels \\
+update-rc.d NAME defaults & Enable at boot (Debian 6--7) \\
+update-rc.d NAME remove & Disable at boot \\
+/etc/init.d/NAME start & Direct init script control \\
+\end{tabular}
+
+\subsection*{Windows}
+
+\begin{tabular}{@{}CD@{}}
+sc query NAME & Show service status \\
+sc start NAME / sc stop NAME & Start or stop \\
+sc config NAME start= auto & Set to auto-start \\
+sc config NAME start= disabled & Disable a service \\
+sc qc NAME & Show config (binary path) \\
+net start / net stop NAME & Start or stop \\
+net start & List running services \\
+Get-Service NAME & PS: service status \\
+Restart-Service NAME & PS: restart \\
+Set-Service NAME -StartupType Auto & PS: change startup type \\
+sc query type= service state= all & List every service \\
+\end{tabular}
+
+\vspace{2pt}
+\cheatheader{CREATING / EDITING SERVICES}
+
+\subsection*{systemd unit file: /etc/systemd/system/NAME.service}
+
+{\ttfamily\footnotesize
+[Unit]\\
+Description=My Custom Service\\
+After=network.target\\[2pt]
+[Service]\\
+Type=simple\\
+ExecStart=/usr/local/bin/myapp\\
+Restart=on-failure\\
+User=appuser\\
+WorkingDirectory=/opt/myapp\\[2pt]
+[Install]\\
+WantedBy=multi-user.target
+}
+
+Then: {\ttfamily\footnotesize systemctl daemon-reload \&\& systemctl enable {-}{-}now NAME}
+
+\subsection*{SysVinit}
+
+Create {\ttfamily /etc/init.d/NAME} (executable shell script with LSB header). Functions: {\ttfamily start()}, {\ttfamily stop()}, {\ttfamily restart()}, {\ttfamily status()}. Then {\ttfamily chmod +x} and {\ttfamily chkconfig {-}{-}add NAME} or {\ttfamily update-rc.d NAME defaults}.
+
+\subsection*{Windows}
+
+\begin{tabular}{@{}CD@{}}
+sc create NAME binPath= "C:\textbackslash path\textbackslash app.exe" & Create a service \\
+sc delete NAME & Delete a service \\
+sc config NAME binPath= "..." & Change binary path \\
+sc failure NAME reset= 86400 actions= restart/60000 & Auto-restart on fail \\
+New-Service -Name NAME -BinaryPathName "path" & PS: create service \\
+\end{tabular}
+
+\vspace{2pt}
+\cheatheader{PACKAGE MANAGEMENT}
+
+\subsection*{Debian / Ubuntu (apt)}
+
+\begin{tabular}{@{}CD@{}}
+apt update & Refresh package index \\
+apt install PKG & Install a package \\
+apt remove PKG & Remove (keep config) \\
+apt purge PKG & Remove + delete config \\
+apt upgrade & Upgrade all packages \\
+apt search TERM & Search for a package \\
+apt list {-}{-}installed & List installed packages \\
+dpkg -l & List all installed (detailed) \\
+dpkg -L PKG & Files owned by package \\
+dpkg -S /path/to/file & What package owns this file? \\
+\end{tabular}
+
+\subsection*{RHEL / CentOS / Fedora (dnf/yum)}
+
+\begin{tabular}{@{}CD@{}}
+dnf install PKG & Install (or yum on RHEL 5--7) \\
+dnf remove PKG & Remove a package \\
+dnf update & Update all packages \\
+dnf search TERM & Search for a package \\
+dnf list installed & List installed packages \\
+rpm -qa & List all installed (rpm level) \\
+rpm -ql PKG & Files owned by package \\
+rpm -qf /path/to/file & What package owns this file? \\
+\end{tabular}
+
+\subsection*{Other Distros}
+
+\begin{tabular}{@{}CD@{}}
+zypper install PKG / zypper update & openSUSE / SLES \\
+pacman -S PKG / pacman -Syu & Arch Linux \\
+apk add PKG / apk upgrade & Alpine Linux \\
+\end{tabular}
+
+\subsection*{Windows}
+
+\begin{tabular}{@{}CD@{}}
+winget install PKG & Install from winget \\
+winget search TERM & Search packages \\
+winget upgrade {-}{-}all & Update all \\
+winget list & List installed software \\
+choco install PKG & Chocolatey: install \\
+choco upgrade all & Chocolatey: update all \\
+Get-WindowsFeature & List server roles/features \\
+Install-WindowsFeature NAME & Install a role \\
+DISM /Online /Enable-Feature /FeatureName:NAME & Enable Windows feature \\
+\end{tabular}
+
+\vspace{2pt}
+\cheatheader{FINDING FILES: DATABASES}
+
+\subsection*{Linux -- MySQL / MariaDB}
+
+\begin{tabular}{@{}CD@{}}
+find / -name "*.frm" 2>/dev/null & Table definition files \\
+find / -name "ibdata*" 2>/dev/null & InnoDB data files \\
+find / -name "my.cnf" -o -name "my.ini" & Config files \\
+mysql -e "SHOW VARIABLES LIKE 'datadir';" & Data dir from MySQL \\
+ss -tlnp | grep 3306 & Is MySQL listening? \\
+\end{tabular}
+
+Default configs: {\ttfamily /etc/mysql/my.cnf} (Debian), {\ttfamily /etc/my.cnf} (RHEL)
+
+\subsection*{Linux -- PostgreSQL}
+
+\begin{tabular}{@{}CD@{}}
+find / -name "postgresql.conf" 2>/dev/null & Config file \\
+find / -name "pg\_hba.conf" 2>/dev/null & Auth config \\
+su - postgres -c "psql -c 'SHOW data\_directory;'" & Data directory \\
+ss -tlnp | grep 5432 & Is Postgres listening? \\
+\end{tabular}
+
+\subsection*{Linux -- SQLite}
+
+\begin{tabular}{@{}CD@{}}
+find / \textbackslash( -name "*.db" -o -name "*.sqlite" -o -name "*.sqlite3" \textbackslash) 2>/dev/null & All SQLite databases \\
+\end{tabular}
+
+\subsection*{Windows -- SQL Server}
+
+\begin{tabular}{@{}CD@{}}
+Get-Service MSSQL* & Find SQL Server services \\
+sqlcmd -S . -Q "SELECT name, physical\_name FROM sys.master\_files" & All DB file locations \\
+dir /s *.mdf & Find data files \\
+dir /s *.ldf & Find log files \\
+\end{tabular}
+
+\subsection*{Windows -- MySQL}
+
+\begin{tabular}{@{}CD@{}}
+sc query MySQL* & Find MySQL services \\
+dir /s my.ini & Find config file \\
+\end{tabular}
+
+\vspace{2pt}
+\cheatheader{FINDING FILES: WEB SERVERS}
+
+\subsection*{Linux -- Apache}
+
+\begin{tabular}{@{}CD@{}}
+apachectl -S \textnormal{(or} httpd -S\textnormal{)} & Virtual hosts and doc roots \\
+apache2ctl -M & Loaded modules \\
+grep -r "DocumentRoot" /etc/apache2/ & Doc roots (Debian) \\
+grep -r "DocumentRoot" /etc/httpd/ & Doc roots (RHEL) \\
+find /etc -name "*.conf" -path "*/apache*" & All Apache configs \\
+\end{tabular}
+
+\subsection*{Linux -- Nginx}
+
+\begin{tabular}{@{}CD@{}}
+nginx -T & Dump full parsed config \\
+grep -r "root " /etc/nginx/ & All document roots \\
+grep -r "server\_name" /etc/nginx/ & All server names \\
+\end{tabular}
+
+\subsection*{Linux -- Generic}
+
+\begin{tabular}{@{}CD@{}}
+ss -tlnp | grep -E ':80 |:443 |:8080 ' & What listens on web ports? \\
+find /var/www -type f -name "*.php" & PHP files in web root \\
+\end{tabular}
+
+\subsection*{Windows -- IIS}
+
+\begin{tabular}{@{}CD@{}}
+appcmd list site & List all IIS sites \\
+appcmd list vdir & Virtual directories \\
+Get-IISSite & PS: list sites \\
+Get-WebBinding & PS: all bindings \\
+\end{tabular}
+
+Default root: {\ttfamily C:\textbackslash inetpub\textbackslash wwwroot}\\
+Config: {\ttfamily C:\textbackslash Windows\textbackslash System32\textbackslash inetsrv\textbackslash config\textbackslash applicationHost.config}\\
+{\footnotesize appcmd lives at {\ttfamily \%windir\%\textbackslash system32\textbackslash inetsrv\textbackslash appcmd.exe}}
+
+\vspace{2pt}
+\cheatheader{FINDING FILES: OTHER SERVICES}
+
+\subsection*{Linux}
+
+\begin{tabular}{@{}CD@{}}
+ss -tlnp & All listening TCP + process \\
+ss -ulnp & All listening UDP + process \\
+find /etc -name "named.conf*" & BIND DNS config \\
+grep -r "zone " /etc/named* /etc/bind/* & DNS zone files \\
+postconf -n & Postfix non-default settings \\
+cat /etc/vsftpd.conf & vsftpd FTP config \\
+testparm -s & Effective Samba config \\
+smbstatus & Samba connections/shares \\
+find /etc -name "slapd*" & OpenLDAP config \\
+\end{tabular}
+
+\subsection*{Windows}
+
+\begin{tabular}{@{}CD@{}}
+netstat -abno & All ports + PIDs + names \\
+Get-NetTCPConnection -State Listen & PS: listening ports \\
+dnscmd /enumzones & List DNS zones \\
+Get-DnsServerZone & PS: list DNS zones \\
+dcdiag /v & DC diagnostics \\
+repadmin /replsummary & Replication health \\
+nltest /dclist:DOMAIN & List all DCs \\
+netsh dhcp server show scope & DHCP scopes \\
+net share & List file shares \\
+Get-SmbShare & PS: shares \\
+\end{tabular}
+
+\vspace{2pt}
+\cheatheader{CREATING BACKUPS}
+
+\subsection*{Linux -- Files and Directories}
+
+\begin{tabular}{@{}CD@{}}
+tar czf /backup/etc.tar.gz /etc & Compress /etc \\
+tar czf /backup/home.tar.gz /home & Compress /home \\
+tar czf /backup/www.tar.gz /var/www & Compress web roots \\
+tar xzf /backup/etc.tar.gz -C /restore & Extract a backup \\
+rsync -av /src/ /dst/ & Incremental sync \\
+rsync -av -e ssh /src/ user@host:/dst/ & Remote sync via SSH \\
+cp -a /etc /backup/etc-\$(date +\%F) & Copy with timestamp \\
+\end{tabular}
+
+\subsection*{Linux -- Database Backups}
+
+\begin{tabular}{@{}CD@{}}
+mysqldump -u root -p {-}{-}all-databases > all.sql & Dump all MySQL DBs \\
+mysqldump -u root -p DBNAME > db.sql & Dump one MySQL DB \\
+mysql -u root -p DBNAME < db.sql & Restore MySQL \\
+pg\_dumpall -U postgres > all.sql & Dump all PostgreSQL \\
+pg\_dump -U postgres DBNAME > db.sql & Dump one PostgreSQL DB \\
+psql -U postgres DBNAME < db.sql & Restore PostgreSQL \\
+sqlite3 /path/db .dump > bak.sql & Dump SQLite \\
+\end{tabular}
+
+\subsection*{Linux -- Quick Backup Script}
+
+{\ttfamily\footnotesize
+\#!/bin/bash\\
+D=\$(date +\%F-\%H\%M); B=/backup/\$D; mkdir -p \$B\\
+tar czf \$B/etc.tar.gz /etc\\
+tar czf \$B/www.tar.gz /var/www /srv 2>/dev/null\\
+mysqldump -u root {-}{-}all-databases | gzip > \$B/mysql.sql.gz\\
+cp /etc/fstab /etc/passwd /etc/shadow /etc/group \$B/\\
+crontab -l > \$B/root-crontab.txt 2>/dev/null\\
+systemctl list-unit-files > \$B/services.txt\\
+echo "Backup complete: \$B"
+}
+
+\subsection*{Windows -- System and Files}
+
+\begin{tabular}{@{}CD@{}}
+wbadmin start systemstatebackup -backupTarget:E: & System State backup \\
+wbadmin start backup -backupTarget:E: -include:C: & Full volume backup \\
+robocopy C:\textbackslash src E:\textbackslash dst /MIR /ZB /R:1 /W:1 & Mirror copy \\
+\end{tabular}
+
+\subsection*{Windows -- Registry, Policy, Firewall}
+
+\begin{tabular}{@{}CD@{}}
+reg export HKLM\textbackslash SOFTWARE out.reg & Export registry key \\
+reg import out.reg & Import registry key \\
+secedit /export /cfg sec.cfg & Export security policy \\
+netsh advfirewall export fw.wfw & Export firewall rules \\
+netsh advfirewall import fw.wfw & Import firewall rules \\
+\end{tabular}
+
+\subsection*{Windows -- AD and Database}
+
+\begin{tabular}{@{}CD@{}}
+ntdsutil "ac i ntds" "ifm" "create full C:\textbackslash bak" q q & AD IFM backup \\
+Backup-GPO -All -Path C:\textbackslash GPOBackup & Backup all GPOs \\
+sqlcmd -Q "BACKUP DATABASE [db] TO DISK='C:\textbackslash b.bak'" & SQL Server backup \\
+\end{tabular}
+
+\vspace{2pt}
+\cheatheader{QUICK TRIAGE: WHAT CHANGED?}
+
+\subsection*{Linux}
+
+\begin{tabular}{@{}CD@{}}
+find / -mmin -60 -type f 2>/dev/null & Files modified in last hour \\
+find / -mtime -1 -type f 2>/dev/null & Files modified in last 24h \\
+last -20 & Last 20 logins \\
+lastb -20 & Last 20 failed logins \\
+history & Command history (current user) \\
+cat /home/*/.bash\_history & All users' histories \\
+ausearch -ts recent & Recent audit events \\
+debsums -c & Changed package files (Debian) \\
+rpm -Va & Changed package files (RHEL) \\
+\end{tabular}
+
+\subsection*{Windows}
+
+\begin{tabular}{@{}CD@{}}
+Get-ChildItem C:\textbackslash\ -Recurse | Where \{\$\_.LastWriteTime -gt (Get-Date).AddHours(-1)\} & Files modified in last hour \\
+wevtutil qe Security /c:20 /f:text & Last 20 security events \\
+Get-EventLog Security -Newest 50 & Recent security events \\
+query user & Who is logged in? \\
+qwinsta & All sessions (incl.\ RDP) \\
+sfc /verifyonly & System file integrity \\
+\end{tabular}
+
+\vspace{2pt}
+\cheatheader{USER AND PERMISSION MANAGEMENT}
+
+\subsection*{Linux}
+
+\begin{tabular}{@{}CD@{}}
+useradd -m USERNAME & Create user with home dir \\
+userdel -r USERNAME & Delete user + home dir \\
+passwd USERNAME & Change password \\
+usermod -aG GROUP USER & Add user to group \\
+gpasswd -d USER GROUP & Remove from group \\
+chown USER:GROUP FILE & Change ownership \\
+chmod 750 FILE & Set permissions (rwxr-x---) \\
+grep "sudo\textbackslash|wheel" /etc/group & Who has sudo? \\
+visudo & Edit sudoers safely \\
+passwd -l USERNAME & Lock account \\
+passwd -u USERNAME & Unlock account \\
+chage -l USERNAME & Password expiry info \\
+\end{tabular}
+
+\subsection*{Windows}
+
+\begin{tabular}{@{}CD@{}}
+net user USERNAME PASS /add & Create local user \\
+net user USERNAME /del & Delete user \\
+net localgroup GROUP USER /add & Add to group \\
+net localgroup GROUP USER /del & Remove from group \\
+net localgroup Administrators & List local admins \\
+icacls FILE & View permissions \\
+icacls FILE /grant USER:F & Grant full control \\
+takeown /F FILE /R & Take ownership \\
+net user USERNAME /active:no & Disable account \\
+\end{tabular}
+
+\subsection*{Windows -- Active Directory}
+
+\begin{tabular}{@{}CD@{}}
+New-ADUser -Name "user" -Enabled \$true & Create AD user \\
+Add-ADGroupMember "Group" "User" & Add to AD group \\
+Disable-ADAccount -Identity USER & Disable AD account \\
+Search-ADAccount -LockedOut & Find locked accounts \\
+Unlock-ADAccount -Identity USER & Unlock account \\
+\end{tabular}
+
+\vspace{2pt}
+\cheatheader{FIREWALL QUICK REFERENCE}
+
+\subsection*{Linux -- iptables}
+
+\begin{tabular}{@{}CD@{}}
+iptables -L -n -v & List all rules \\
+iptables -A INPUT -p tcp {-}{-}dport 22 -j ACCEPT & Allow SSH \\
+iptables -A INPUT -s IP -j DROP & Block an IP \\
+iptables -P INPUT DROP & Default deny inbound \\
+iptables-save > /etc/iptables.rules & Save rules \\
+iptables-restore < /etc/iptables.rules & Restore rules \\
+\end{tabular}
+
+\subsection*{Linux -- firewalld (RHEL 7+)}
+
+\begin{tabular}{@{}CD@{}}
+firewall-cmd {-}{-}list-all & Show current rules \\
+firewall-cmd {-}{-}add-port=80/tcp {-}{-}permanent & Open port \\
+firewall-cmd {-}{-}reload & Apply changes \\
+\end{tabular}
+
+\subsection*{Windows}
+
+\begin{tabular}{@{}CD@{}}
+netsh advfirewall show allprofiles & Firewall status \\
+netsh advfirewall set allprofiles state on & Enable firewall \\
+netsh advfirewall firewall add rule name="Allow SSH" dir=in action=allow protocol=TCP localport=22 & Allow a port inbound \\
+netsh advfirewall firewall add rule name="Block" dir=in action=block remoteip=IP & Block an IP \\
+netsh advfirewall firewall show rule name=all & List all rules \\
+\end{tabular}
+
+\vspace{2pt}
+\cheatheader{COMMON CONFIG FILE LOCATIONS}
+
+\subsection*{Linux}
+
+\begin{tabular}{@{}CD@{}}
+/etc/ssh/sshd\_config & SSH server config \\
+/etc/passwd, /etc/shadow & User accounts / passwords \\
+/etc/group, /etc/gshadow & Groups \\
+/etc/sudoers, /etc/sudoers.d/ & Sudo rules \\
+/etc/fstab & Filesystem mounts \\
+/etc/hosts, /etc/resolv.conf & DNS / hostname resolution \\
+/etc/crontab, /var/spool/cron/ & Scheduled tasks \\
+/etc/rsyslog.conf & Syslog config \\
+/var/log/auth.log \textnormal{(Deb)} & Authentication log \\
+/var/log/secure \textnormal{(RHEL)} & Authentication log \\
+/var/log/syslog \textnormal{(Deb)} & System log \\
+/var/log/messages \textnormal{(RHEL)} & System log \\
+\end{tabular}
+
+\subsection*{Windows}
+
+\begin{tabular}{@{}CD@{}}
+C:\textbackslash Windows\textbackslash System32\textbackslash drivers\textbackslash etc\textbackslash hosts & Hosts file \\
+C:\textbackslash Windows\textbackslash System32\textbackslash config\textbackslash & SAM, SECURITY, SYSTEM \\
+C:\textbackslash Windows\textbackslash System32\textbackslash winevt\textbackslash Logs\textbackslash & Event log files \\
+C:\textbackslash inetpub\textbackslash wwwroot\textbackslash & IIS default web root \\
+C:\textbackslash ProgramData\textbackslash & App config/data (hidden) \\
+\%APPDATA\% & Per-user app config \\
+\end{tabular}
+
+\end{multicols}

@@ -2,6 +2,17 @@
 
 A collection of blue team playbooks, runbooks, and reference sheets for the Pacific Rim Collegiate Cyber Defense Competition (PRCCDC). Covers incident response, service operations, centralized logging, network discovery, and inject response templates — all formatted for print via Quarto and pdflatex.
 
+<table>
+  <tr>
+    <td align="center"><img src="preview/first-15-minutes-1.png" width="400"/><br/><sub>First 15 Minutes Runbook</sub></td>
+    <td align="center"><img src="preview/ir-playbook-linux-01.png" width="400"/><br/><sub>IR Playbook — Linux</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="preview/script-analysis-1.png" width="400"/><br/><sub>Script Analysis Cheatsheet</sub></td>
+    <td align="center"><img src="preview/host-enum-cheatsheet-1.png" width="400"/><br/><sub>Host Enumeration Cheat Sheet</sub></td>
+  </tr>
+</table>
+
 ---
 
 # Forward:
